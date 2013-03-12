@@ -144,6 +144,10 @@ public class ClusteredGetCommand extends BaseRpcCommand implements FlagAffectedC
       }
    }
 
+   public GlobalTransaction getGlobalTransaction() {
+      return gtx;
+   }
+
    private void acquireLocksIfNeeded() throws Throwable {
       if (acquireRemoteLock) {
          LockControlCommand lockControlCommand = commandsFactory.buildLockControlCommand(key, flags, gtx);
