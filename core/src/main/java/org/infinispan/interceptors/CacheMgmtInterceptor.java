@@ -27,10 +27,10 @@ import org.infinispan.commands.write.EvictCommand;
 import org.infinispan.commands.write.PutKeyValueCommand;
 import org.infinispan.commands.write.PutMapCommand;
 import org.infinispan.commands.write.RemoveCommand;
-import org.infinispan.commands.write.VersionedPutKeyValueCommand;
 import org.infinispan.container.DataContainer;
 import org.infinispan.context.InvocationContext;
 import org.infinispan.factories.annotations.Inject;
+import org.infinispan.factories.annotations.Start;
 import org.infinispan.interceptors.base.JmxStatsCommandInterceptor;
 import org.infinispan.jmx.annotations.DisplayType;
 import org.infinispan.jmx.annotations.MBean;
@@ -38,6 +38,7 @@ import org.infinispan.jmx.annotations.ManagedAttribute;
 import org.infinispan.jmx.annotations.ManagedOperation;
 import org.infinispan.jmx.annotations.MeasurementType;
 import org.infinispan.jmx.annotations.Units;
+import org.infinispan.util.TimeService;
 import org.infinispan.util.logging.Log;
 import org.infinispan.util.logging.LogFactory;
 
@@ -60,12 +61,13 @@ public class CacheMgmtInterceptor extends JmxStatsCommandInterceptor {
    private final AtomicLong misses = new AtomicLong(0);
    private final AtomicLong stores = new AtomicLong(0);
    private final AtomicLong evictions = new AtomicLong(0);
-   private final AtomicLong startNanoseconds = new AtomicLong(System.nanoTime());
-   private final AtomicLong resetNanoseconds = new AtomicLong(startNanoseconds.get());
+   private final AtomicLong startNanoseconds = new AtomicLong(0);
+   private final AtomicLong resetNanoseconds = new AtomicLong(0);
    private final AtomicLong removeHits = new AtomicLong(0);
    private final AtomicLong removeMisses = new AtomicLong(0);
 
    private DataContainer dataContainer;
+   private TimeService timeService;
 
    private static final Log log = LogFactory.getLog(CacheMgmtInterceptor.class);
 
@@ -76,8 +78,15 @@ public class CacheMgmtInterceptor extends JmxStatsCommandInterceptor {
 
    @Inject
    @SuppressWarnings("unused")
-   public void setDependencies(DataContainer dataContainer) {
+   public void setDependencies(DataContainer dataContainer, TimeService timeService) {
       this.dataContainer = dataContainer;
+      this.timeService = timeService;
+   }
+
+   @Start
+   public void start() {
+      startNanoseconds.set(timeService.time(true));
+      resetNanoseconds.set(startNanoseconds.get());
    }
 
    @Override
@@ -89,10 +98,10 @@ public class CacheMgmtInterceptor extends JmxStatsCommandInterceptor {
 
    @Override
    public Object visitGetKeyValueCommand(InvocationContext ctx, GetKeyValueCommand command) throws Throwable {
-      long t1 = System.nanoTime();
+      long t1 = timeService.time(true);
       Object retval = invokeNextInterceptor(ctx, command);
-      long t2 = System.nanoTime();
-      long intervalMilliseconds = nanosecondsIntervalToMilliseconds(t1, t2);
+      long t2 = timeService.time(true);
+      long intervalMilliseconds = timeService.timeDuration(t1, t2, TimeUnit.MILLISECONDS);
       if (ctx.isOriginLocal()) {
          if (retval == null) {
             missTimes.getAndAdd(intervalMilliseconds);
@@ -108,10 +117,10 @@ public class CacheMgmtInterceptor extends JmxStatsCommandInterceptor {
    @Override
    public Object visitPutMapCommand(InvocationContext ctx, PutMapCommand command) throws Throwable {
       final Map<Object, Object> data = command.getMap();
-      final long t1 = System.nanoTime();
+      final long t1 = timeService.time(true);
       final Object retval = invokeNextInterceptor(ctx, command);
-      final long t2 = System.nanoTime();
-      final long intervalMilliseconds = nanosecondsIntervalToMilliseconds(t1, t2);
+      final long t2 = timeService.time(true);
+      final long intervalMilliseconds = timeService.timeDuration(t1, t2, TimeUnit.MILLISECONDS);
       if (data != null && ctx.isOriginLocal() && !data.isEmpty()) {
          storeTimes.getAndAdd(intervalMilliseconds);
          stores.getAndAdd(data.size());
@@ -122,11 +131,11 @@ public class CacheMgmtInterceptor extends JmxStatsCommandInterceptor {
    @Override
    //Map.put(key,value) :: oldValue
    public Object visitPutKeyValueCommand(InvocationContext ctx, PutKeyValueCommand command) throws Throwable {
-      long t1 = System.nanoTime();
+      long t1 = timeService.time(true);
       Object retval = invokeNextInterceptor(ctx, command);
       if (ctx.isOriginLocal() && command.isSuccessful()) {
-         long t2 = System.nanoTime();
-         long intervalMilliseconds = nanosecondsIntervalToMilliseconds(t1, t2);
+         long t2 = timeService.time(true);
+         long intervalMilliseconds = timeService.timeDuration(t1, t2, TimeUnit.MILLISECONDS);
          storeTimes.getAndAdd(intervalMilliseconds);
          stores.incrementAndGet();
       }
@@ -279,7 +288,7 @@ public class CacheMgmtInterceptor extends JmxStatsCommandInterceptor {
          displayType = DisplayType.SUMMARY
    )
    public long getElapsedTime() {
-      return TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startNanoseconds.get());
+      return timeService.timeDuration(startNanoseconds.get(), TimeUnit.SECONDS, true);
    }
 
    @ManagedAttribute(
@@ -290,7 +299,7 @@ public class CacheMgmtInterceptor extends JmxStatsCommandInterceptor {
    )
    @SuppressWarnings("unused")
    public long getTimeSinceReset() {
-      return TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - resetNanoseconds.get());
+      return timeService.timeDuration(resetNanoseconds.get(), TimeUnit.SECONDS, true);
    }
 
    @Override
@@ -308,16 +317,7 @@ public class CacheMgmtInterceptor extends JmxStatsCommandInterceptor {
       storeTimes.set(0);
       removeHits.set(0);
       removeMisses.set(0);
-      resetNanoseconds.set(System.nanoTime());
-   }
-
-   /**
-    * @param nanoStart start time
-    * @param nanoEnd end time
-    * @return the interval rounded in milliseconds
-    */
-   private long nanosecondsIntervalToMilliseconds(final long nanoStart, final long nanoEnd) {
-      return TimeUnit.MILLISECONDS.convert(nanoEnd - nanoStart, TimeUnit.NANOSECONDS);
+      resetNanoseconds.set(timeService.time(true));
    }
 }
 
