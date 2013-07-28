@@ -1596,6 +1596,40 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
    public final void setGMUWaitingTimeEnabled(@Parameter boolean enabled) {
       TransactionsStatisticsRegistry.setGmuWaitingActive(enabled);
    }
+   @ManagedAttribute(description = "Waiting time experience by TO prepare command in GMU",
+                     displayName = "Waiting time experience by TO prepare command in GMU")
+   public final long getTOPrepareWaitTime(){
+      return handleLong((Long)TransactionsStatisticsRegistry.getAttribute(TO_PREPARE_COMMAND_WAIT_TIME));
+   }
+
+   @ManagedAttribute(description = "Number of xacts that has waited on the node when prepared in TO-GMU",
+                     displayName = "Number of xacts that has waited on the node when prepared in TO-GMU")
+   public final long getTOPrepareWaits(){
+     return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(TO_PREPARE_COMMAND_WAITED));
+   }
+   @ManagedAttribute(description = "Average TO-GMU prepare Rtt minus avg replay time at cohorts for successful xact",
+                     displayName = "Average TO-GMU prepare Rtt minus avg replay time at cohorts for successful xact")
+   public final  long getTOPrepareRttMinusAvgValidationTime(){
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(TO_PREPARE_COMMAND_WAITED));
+   }
+   @ManagedAttribute(description = "Average TO-GMU prepare Rtt minus max replay time at cohorts for successful xact",
+                     displayName = "Average TO-GMU prepare Rtt minus max replay time at cohorts for successful xact")
+   public final long  getTOPrepareRttMinusMaxValidationTime(){
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(TO_PREPARE_COMMAND_WAITED));
+   }
+   @ManagedAttribute(description = "Average TO-GMU max replay time at cohorts",
+                     displayName = "Average max replay time at cohorts")
+   public final long getTOMaxValidationTime(){
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(TO_PREPARE_COMMAND_WAITED));
+   }
+   @ManagedAttribute(description = "Average TO-GMU mean replay time at cohorts for successful xact",
+                     displayName = "Average TO-GMU mean replay time at cohorts for successful xact")
+   public final long getTOAvgValidationTime(){
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(TO_PREPARE_COMMAND_WAITED));
+   }
+
+
+
 
     /*
      "handleCommand" methods could have been more compact (since they do very similar stuff)

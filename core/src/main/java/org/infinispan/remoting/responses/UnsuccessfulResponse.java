@@ -41,7 +41,7 @@ import java.util.Set;
 public class UnsuccessfulResponse extends ValidResponse {
    //public static final UnsuccessfulResponse INSTANCE = new UnsuccessfulResponse();
 
-   UnsuccessfulResponse() {
+   public UnsuccessfulResponse() {
    }
 
    @Override

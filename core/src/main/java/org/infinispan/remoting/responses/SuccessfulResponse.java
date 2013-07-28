@@ -43,7 +43,7 @@ public class SuccessfulResponse extends ValidResponse {
 
    private final Object responseValue;
 
-   private SuccessfulResponse(Object responseValue) {
+   public SuccessfulResponse(Object responseValue) {
       this.responseValue = responseValue;
    }
 
