@@ -22,6 +22,8 @@
  */
 package org.infinispan.remoting.responses;
 
+import org.infinispan.stats.PiggyBackStat;
+
 /**
  * A response to be sent back to a remote caller
  *

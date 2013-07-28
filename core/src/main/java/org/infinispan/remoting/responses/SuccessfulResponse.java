@@ -29,6 +29,7 @@ import java.util.Set;
 
 import org.infinispan.marshall.AbstractExternalizer;
 import org.infinispan.marshall.Ids;
+import org.infinispan.stats.PiggyBackStat;
 import org.infinispan.util.Util;
 
 /**
@@ -38,7 +39,7 @@ import org.infinispan.util.Util;
  * @since 4.0
  */
 public class SuccessfulResponse extends ValidResponse {
-   public static final SuccessfulResponse SUCCESSFUL_EMPTY_RESPONSE = new SuccessfulResponse(null);
+   //public static final SuccessfulResponse SUCCESSFUL_EMPTY_RESPONSE = new SuccessfulResponse(null);
 
    private final Object responseValue;
 
@@ -47,8 +48,8 @@ public class SuccessfulResponse extends ValidResponse {
    }
 
    public static SuccessfulResponse create(Object responseValue) {
-      return responseValue == null ? SUCCESSFUL_EMPTY_RESPONSE : new SuccessfulResponse(responseValue);
-   }    
+      return responseValue == null ? new SuccessfulResponse(null) : new SuccessfulResponse(responseValue);
+   }
 
    @Override
    public boolean isSuccessful() {
@@ -91,6 +92,7 @@ public class SuccessfulResponse extends ValidResponse {
          } else {
             output.writeBoolean(true);
             output.writeObject(response.responseValue);
+            output.writeObject(response.piggyBackStat);
          }
       }
 
@@ -98,9 +100,11 @@ public class SuccessfulResponse extends ValidResponse {
       public SuccessfulResponse readObject(ObjectInput input) throws IOException, ClassNotFoundException {
          boolean nonNullResponse = input.readBoolean();
          if (nonNullResponse) {
-            return new SuccessfulResponse(input.readObject());
+            SuccessfulResponse sr = new SuccessfulResponse(input.readObject());
+            sr.setPiggyBackStat((PiggyBackStat) input.readObject());
+            return sr;
          } else {
-            return SuccessfulResponse.SUCCESSFUL_EMPTY_RESPONSE;
+            return new SuccessfulResponse(null);
          }
       }
 

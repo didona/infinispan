@@ -44,13 +44,16 @@ import org.infinispan.factories.scopes.Scope;
 import org.infinispan.factories.scopes.Scopes;
 import org.infinispan.interceptors.totalorder.RetryPrepareException;
 import org.infinispan.manager.NamedCacheNotFoundException;
+import org.infinispan.remoting.responses.AbstractResponse;
 import org.infinispan.remoting.responses.ExceptionResponse;
 import org.infinispan.remoting.responses.Response;
 import org.infinispan.remoting.responses.ResponseGenerator;
+import org.infinispan.remoting.responses.SuccessfulResponse;
 import org.infinispan.remoting.transport.Address;
 import org.infinispan.remoting.transport.Transport;
 import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
 import org.infinispan.statetransfer.StateTransferManager;
+import org.infinispan.stats.PiggyBackStat;
 import org.infinispan.stats.TransactionsStatisticsRegistry;
 import org.infinispan.stats.container.TransactionStatistics;
 import org.infinispan.transaction.TotalOrderRemoteTransactionState;
@@ -161,6 +164,7 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
          final TotalOrderRemoteTransactionState state = ((TotalOrderPrepareCommand) cmd).getOrCreateState();
          final TotalOrderManager totalOrderManager = cr.getTotalOrderManager();
          totalOrderManager.ensureOrder(state, ((TotalOrderPrepareCommand) cmd).getKeysToLock());
+         final boolean hasWaited = isTOGoingToWait(state);
          totalOrderExecutorService.execute(new BlockingRunnable() {
             @Override
             public boolean isReady() {
@@ -176,13 +180,33 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
             public void run() {
                final PrepareCommand command = (PrepareCommand) cmd;
                final boolean stats = TransactionsStatisticsRegistry.isActive();
+               final boolean isServiceTime = TransactionsStatisticsRegistry.isSampleServiceTime();
+               final TransactionStatistics tx = stats ? TransactionsStatisticsRegistry.getTransactionStatistics() : null;
                Response resp;
+               long waitTime = 0;
                try {
+                  long startR = 0, startS = 0;
                   if (stats) {
                      TransactionsStatisticsRegistry.attachRemoteTransactionStatistic(command.getGlobalTransaction(),
                                                                                      true);
+                     startR = System.nanoTime();
+                     startS = isServiceTime ? TransactionsStatisticsRegistry.getThreadCPUTime() : 0;
+
+                     if (hasWaited) {
+                        tx.incrementValue(TO_PREPARE_COMMAND_WAITED);
+                        waitTime = startR - arrivalTime;
+                        tx.addValue(TO_PREPARE_COMMAND_WAIT_TIME, waitTime);
+                     }
                   }
+
                   resp = handleInternal(cmd, cr);
+                  if (stats) {
+                     tx.incrementValue(TO_PREPARE_COMMAND_SUCCESSFUL);
+                     tx.addValue(TO_PREPARE_COMMAND_RESPONSE_TIME, System.nanoTime() - startR);
+                     if (isServiceTime) {
+                        tx.addValue(TO_PREPARE_COMMAND_SERVICE_TIME, TransactionsStatisticsRegistry.getThreadCPUTime() - startS);
+                     }
+                  }
                } catch (RetryPrepareException retry) {
                   log.debugf(retry, "Prepare [%s] conflicted with state transfer", cmd);
                   resp = new ExceptionResponse(retry);
@@ -193,12 +217,16 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
                if (resp instanceof ExceptionResponse) {
                   totalOrderManager.release(state);
                }
-               //the ResponseGenerated is null in this case because the return value is a Response
-               reply(response, resp);
+
                if (stats) {
                   TransactionsStatisticsRegistry.detachRemoteTransactionStatistic(command.getGlobalTransaction(),
                                                                                   command.isOnePhaseCommit());
+                  PiggyBackStat pbs = new PiggyBackStat(waitTime);
+                  ((AbstractResponse) resp).setPiggyBackStat(pbs);
                }
+               //the ResponseGenerated is null in this case because the return value is a Response
+               reply(response, resp);
+
             }
 
             @Override
@@ -329,6 +357,16 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
       } catch (Exception e) {
          return 0;
       }
+   }
+
+
+   private boolean isTOGoingToWait(final TotalOrderRemoteTransactionState state) {
+      for (TotalOrderLatch block : state.getConflictingTransactionBlocks()) {
+         if (block.isBlocked()) {
+            return false;
+         }
+      }
+      return true;
    }
 
 }
