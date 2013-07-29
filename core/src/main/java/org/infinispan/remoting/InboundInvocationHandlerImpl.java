@@ -179,6 +179,9 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
             public void run() {
                final PrepareCommand command = (PrepareCommand) cmd;
                final boolean stats = TransactionsStatisticsRegistry.isActive();
+               if (stats)
+                  TransactionsStatisticsRegistry.attachRemoteTransactionStatistic(command.getGlobalTransaction(),
+                                                                                  true);
                final boolean isServiceTime = TransactionsStatisticsRegistry.isSampleServiceTime();
                final TransactionStatistics tx = stats ? TransactionsStatisticsRegistry.getTransactionStatistics() : null;
                Response resp;
@@ -186,8 +189,6 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
                try {
                   long startR = 0, startS = 0;
                   if (stats) {
-                     TransactionsStatisticsRegistry.attachRemoteTransactionStatistic(command.getGlobalTransaction(),
-                                                                                     true);
                      startR = System.nanoTime();
                      startS = isServiceTime ? TransactionsStatisticsRegistry.getThreadCPUTime() : 0;
 
@@ -360,10 +361,10 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
    private boolean isTOGoingToWait(final TotalOrderRemoteTransactionState state) {
       for (TotalOrderLatch block : state.getConflictingTransactionBlocks()) {
          if (block.isBlocked()) {
-            return false;
+            return true;
          }
       }
-      return true;
+      return false;
    }
 
 }

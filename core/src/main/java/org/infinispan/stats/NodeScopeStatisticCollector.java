@@ -607,9 +607,9 @@ public class NodeScopeStatisticCollector {
          case TO_GMU_PREPARE_COMMAND_AT_LEAST_ONE_WAIT:
             return avgLocal(snapshot, NUM_RTTS_PREPARE, TO_GMU_PREPARE_COMMAND_AT_LEAST_ONE_WAIT);
          case TO_GMU_PREPARE_COMMAND_RTT_MINUS_AVG:
-            return avgLocal(snapshot, NUM_RTTS_PREPARE, TO_GMU_PREPARE_COMMAND_RTT_MINUS_AVG);
+            return microAvgLocal(snapshot, NUM_RTTS_PREPARE, TO_GMU_PREPARE_COMMAND_RTT_MINUS_AVG);
          case TO_GMU_PREPARE_COMMAND_RTT_MINUS_MAX:
-            return avgLocal(snapshot, NUM_RTTS_PREPARE, TO_GMU_PREPARE_COMMAND_RTT_MINUS_MAX);
+            return microAvgLocal(snapshot, NUM_RTTS_PREPARE, TO_GMU_PREPARE_COMMAND_RTT_MINUS_MAX);
          case TO_GMU_PREPARE_COMMAND_MAX_WAIT_TIME:
             return microAvgLocal(snapshot, TO_GMU_PREPARE_COMMAND_AT_LEAST_ONE_WAIT, TO_GMU_PREPARE_COMMAND_MAX_WAIT_TIME);
          case TO_GMU_PREPARE_COMMAND_AVG_WAIT_TIME:
