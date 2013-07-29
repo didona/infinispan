@@ -48,7 +48,6 @@ import org.infinispan.remoting.responses.AbstractResponse;
 import org.infinispan.remoting.responses.ExceptionResponse;
 import org.infinispan.remoting.responses.Response;
 import org.infinispan.remoting.responses.ResponseGenerator;
-import org.infinispan.remoting.responses.SuccessfulResponse;
 import org.infinispan.remoting.transport.Address;
 import org.infinispan.remoting.transport.Transport;
 import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
@@ -193,19 +192,17 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
                      startS = isServiceTime ? TransactionsStatisticsRegistry.getThreadCPUTime() : 0;
 
                      if (hasWaited) {
-                        tx.incrementValue(TO_PREPARE_COMMAND_WAITED);
                         waitTime = startR - arrivalTime;
-                        tx.addValue(TO_PREPARE_COMMAND_WAIT_TIME, waitTime);
                      }
                   }
 
                   resp = handleInternal(cmd, cr);
                   if (stats) {
-                     tx.incrementValue(TO_PREPARE_COMMAND_SUCCESSFUL);
-                     tx.addValue(TO_PREPARE_COMMAND_RESPONSE_TIME, System.nanoTime() - startR);
+                     tx.addValue(TO_GMU_PREPARE_COMMAND_RESPONSE_TIME, System.nanoTime() - startR);
                      if (isServiceTime) {
-                        tx.addValue(TO_PREPARE_COMMAND_SERVICE_TIME, TransactionsStatisticsRegistry.getThreadCPUTime() - startS);
+                        tx.addValue(TO_GMU_PREPARE_COMMAND_SERVICE_TIME, TransactionsStatisticsRegistry.getThreadCPUTime() - startS);
                      }
+                     tx.incrementValue(TO_GMU_PREPARE_COMMAND_SERVED);
                   }
                } catch (RetryPrepareException retry) {
                   log.debugf(retry, "Prepare [%s] conflicted with state transfer", cmd);

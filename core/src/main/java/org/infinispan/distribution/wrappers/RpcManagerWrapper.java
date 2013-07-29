@@ -237,12 +237,21 @@ public class RpcManagerWrapper implements RpcManager {
          }
          recipientSizeStat = NUM_NODES_PREPARE;
          commandSizeStat = PREPARE_COMMAND_SIZE;
+
          if (command instanceof TotalOrderGMUPrepareCommand) {
-            long[] toW = toWaitTimes(responseMap);
-            long maxW = toW[0];
-            long avgW = toW[1];
-            transactionStatistics.addValue(TO_PREPARE_COMMAND_RTT_MINUS_MAX, wallClockTimeTaken - maxW);
-            transactionStatistics.addValue(TO_PREPARE_COMMAND_RTT_MINUS_AVG, wallClockTimeTaken - avgW);
+            WaitStats w = new WaitStats(responseMap);
+            long maxW = w.maxConditionalWaitTime;
+            long avgW = w.avgUnconditionalWaitTime;
+            long condAvg = w.avgConditionalWaitTime;
+            long waits = w.numWaitedNodes;
+            transactionStatistics.addValue(TO_GMU_PREPARE_COMMAND_RTT_MINUS_MAX, wallClockTimeTaken - maxW);
+            transactionStatistics.addValue(TO_GMU_PREPARE_COMMAND_RTT_MINUS_AVG, wallClockTimeTaken - avgW);
+            if (waits > 0) {
+               transactionStatistics.incrementValue(TO_GMU_PREPARE_COMMAND_AT_LEAST_ONE_WAIT);
+               transactionStatistics.addValue(TO_GMU_PREPARE_COMMAND_NODES_WAITED, waits);
+               transactionStatistics.addValue(TO_GMU_PREPARE_COMMAND_AVG_WAIT_TIME, condAvg);
+               transactionStatistics.addValue(TO_GMU_PREPARE_COMMAND_MAX_WAIT_TIME, maxW);
+            }
          }
       } else if (command instanceof RollbackCommand) {
          if (sync) {
@@ -322,17 +331,52 @@ public class RpcManagerWrapper implements RpcManager {
    //TO replies always have a piggyback!
    private long[] toWaitTimes(Map<Address, Response> map) {
       double max = 0, sum = 0, temp;
+      long waited = 0;
       AbstractResponse r;
-
       Set<Map.Entry<Address, Response>> set = map.entrySet();
       for (Map.Entry<Address, Response> e : set) {
          r = (AbstractResponse) e.getValue();
          temp = r.getPiggyBackStat().getTOPrepareWaitingTime();
+         if (temp > 0)
+            waited++;
          if (temp > max)
             temp = max;
          sum += temp;
       }
       long avg = (long) (sum / set.size());
-      return new long[]{(long) max, avg};
+      return new long[]{(long) max, avg, waited};
    }
+
+   private class WaitStats {
+      private long numWaitedNodes;
+      private long avgConditionalWaitTime;
+      private long maxConditionalWaitTime;
+      private long avgUnconditionalWaitTime;
+
+
+      WaitStats(Map<Address, Response> map) {
+         double max = 0, sum = 0, temp;
+         long waited = 0;
+         AbstractResponse r;
+         Set<Map.Entry<Address, Response>> set = map.entrySet();
+         for (Map.Entry<Address, Response> e : set) {
+            r = (AbstractResponse) e.getValue();
+            temp = r.getPiggyBackStat().getTOPrepareWaitingTime();
+            if (temp > 0)
+               waited++;
+            if (temp > max)
+               temp = max;
+            sum += temp;
+         }
+         long unAvg = (long) (sum / set.size());
+         long coAvg = (long) (sum / waited);
+
+         this.maxConditionalWaitTime = (long) max;
+         this.avgUnconditionalWaitTime = unAvg;
+         this.avgConditionalWaitTime = coAvg;
+         this.numWaitedNodes = waited;
+      }
+   }
+
+
 }
