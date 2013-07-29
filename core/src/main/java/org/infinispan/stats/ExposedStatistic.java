@@ -281,7 +281,9 @@ public enum ExposedStatistic {
    TO_GMU_PREPARE_COMMAND_AVG_WAIT_TIME(true, false),
    TO_GMU_PREPARE_COMMAND_RESPONSE_TIME(false, true),
    TO_GMU_PREPARE_COMMAND_SERVICE_TIME(false, true),
-   TO_GMU_PREPARE_COMMAND_SERVED(false, true);
+   TO_GMU_PREPARE_COMMAND_SERVED(false, true),
+   TO_GMU_PREPARE_COMMAND_REMOTE_WAIT(false, true),
+   TO_GMU_PREPARE_COMMAND_REMOTE_WAITED(false, true);
 
    public static final int NO_INDEX = -1;
    private static short localStatsSize = 0;

@@ -1609,6 +1609,20 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
       return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(TO_GMU_PREPARE_COMMAND_MAX_WAIT_TIME));
    }
 
+   @ManagedAttribute(description = "Average TO-GMU validation conditional wait time on a single node",
+                     displayName = "Average TO-GMU validation conditional wait time on a single node")
+   public final long getTOAvgValidationConditionalWaitTime() {
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(TO_GMU_PREPARE_COMMAND_REMOTE_WAIT));
+   }
+
+   @ManagedAttribute(description = "Average TO-GMU validations that waited on a node",
+                     displayName = "Average TO-GMU validations that waited on a node")
+   public final long getTONumValidationWaited() {
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(TO_GMU_PREPARE_COMMAND_REMOTE_WAITED));
+   }
+
+
+
    @ManagedAttribute(description = "Probability that a TO-GMU prepare experiences waiting time",
                      displayName = "Probability that a TO-GMU prepare experiences waiting time")
    public final long getTOPrepareWaitProbability() {

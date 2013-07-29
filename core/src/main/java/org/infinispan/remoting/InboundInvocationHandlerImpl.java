@@ -194,6 +194,8 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
 
                      if (hasWaited) {
                         waitTime = startR - arrivalTime;
+                        tx.incrementValue(TO_GMU_PREPARE_COMMAND_REMOTE_WAITED);
+                        tx.addValue(TO_GMU_PREPARE_COMMAND_REMOTE_WAIT,waitTime);
                      }
                   }
 

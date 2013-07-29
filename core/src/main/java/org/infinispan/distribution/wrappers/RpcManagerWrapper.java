@@ -362,10 +362,11 @@ public class RpcManagerWrapper implements RpcManager {
          for (Map.Entry<Address, Response> e : set) {
             r = (AbstractResponse) e.getValue();
             temp = r.getPiggyBackStat().getTOPrepareWaitingTime();
-            if (temp > 0)
+            if (temp > 0) {
                waited++;
-            if (temp > max)
-               temp = max;
+               if (temp > max)
+                  temp = max;
+            }
             sum += temp;
          }
          long unAvg = (long) (sum / set.size());
