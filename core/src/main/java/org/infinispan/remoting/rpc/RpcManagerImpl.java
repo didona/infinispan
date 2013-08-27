@@ -33,14 +33,7 @@ import org.infinispan.configuration.global.GlobalConfiguration;
 import org.infinispan.factories.annotations.ComponentName;
 import org.infinispan.factories.annotations.Inject;
 import org.infinispan.factories.annotations.Start;
-import org.infinispan.jmx.annotations.DataType;
-import org.infinispan.jmx.annotations.DisplayType;
-import org.infinispan.jmx.annotations.MBean;
-import org.infinispan.jmx.annotations.ManagedAttribute;
-import org.infinispan.jmx.annotations.ManagedOperation;
-import org.infinispan.jmx.annotations.MeasurementType;
-import org.infinispan.jmx.annotations.Parameter;
-import org.infinispan.jmx.annotations.Units;
+import org.infinispan.jmx.annotations.*;
 import org.infinispan.remoting.ReplicationQueue;
 import org.infinispan.remoting.RpcException;
 import org.infinispan.remoting.responses.Response;
@@ -82,12 +75,10 @@ public class RpcManagerImpl implements RpcManager {
 
    private static final Log log = LogFactory.getLog(RpcManagerImpl.class);
    private static final boolean trace = log.isTraceEnabled();
-
-   private Transport t;
    private final AtomicLong replicationCount = new AtomicLong(0);
    private final AtomicLong replicationFailures = new AtomicLong(0);
    private final AtomicLong totalReplicationTime = new AtomicLong(0);
-
+   private Transport t;
    private boolean statisticsEnabled = false; // by default, don't gather statistics.
    private Configuration configuration;
    private GlobalConfiguration globalCfg;
@@ -100,10 +91,10 @@ public class RpcManagerImpl implements RpcManager {
 
    @Inject
    public void injectDependencies(Transport t, Cache cache, Configuration cfg,
-            ReplicationQueue replicationQueue, CommandsFactory cf,
-            @ComponentName(ASYNC_TRANSPORT_EXECUTOR) ExecutorService e,
-            LocalTopologyManager localTopologyManager, StateTransferManager stateTransferManager,
-            GlobalConfiguration globalCfg) {
+                                  ReplicationQueue replicationQueue, CommandsFactory cf,
+                                  @ComponentName(ASYNC_TRANSPORT_EXECUTOR) ExecutorService e,
+                                  LocalTopologyManager localTopologyManager, StateTransferManager stateTransferManager,
+                                  GlobalConfiguration globalCfg) {
       this.t = t;
       this.configuration = cfg;
       this.cacheName = cache.getName();
@@ -126,13 +117,13 @@ public class RpcManagerImpl implements RpcManager {
    @ManagedAttribute(description = "Retrieves the committed view.", displayName = "Committed view", dataType = DataType.TRAIT)
    public String getCommittedViewAsString() {
       return localTopologyManager == null ? "N/A" : String.valueOf(localTopologyManager.getCacheTopology(cacheName)
-            .getCurrentCH());
+              .getCurrentCH());
    }
 
    @ManagedAttribute(description = "Retrieves the pending view.", displayName = "Pending view", dataType = DataType.TRAIT)
    public String getPendingViewAsString() {
       return localTopologyManager == null ? "N/A" : String.valueOf(localTopologyManager.getCacheTopology(cacheName)
-            .getPendingCH());
+              .getPendingCH());
    }
 
    private boolean useReplicationQueue(boolean sync) {
@@ -172,7 +163,7 @@ public class RpcManagerImpl implements RpcManager {
             }
          }
          Map<Address, Response> result = t.invokeRemotely(recipients, rpcCommand, mode, timeout, usePriorityQueue, responseFilter,
-                                                          totalOrder, configuration.clustering().cacheMode().isDistributed());
+                 totalOrder, configuration.clustering().cacheMode().isDistributed());
          if (statisticsEnabled) replicationCount.incrementAndGet();
          return result;
       } catch (CacheException e) {
@@ -252,9 +243,9 @@ public class RpcManagerImpl implements RpcManager {
             }
          }
          ResponseFuture result = t.invokeRemotelyWithFuture(recipients, rpc,
-                                                            configuration.clustering().sync().replTimeout(),
-                                                            null, totalOrder,
-                                                            configuration.clustering().cacheMode().isDistributed());
+                 configuration.clustering().sync().replTimeout(),
+                 null, totalOrder,
+                 configuration.clustering().cacheMode().isDistributed());
          if (statisticsEnabled) replicationCount.incrementAndGet();
          return result;
       } catch (CacheException e) {
@@ -344,9 +335,16 @@ public class RpcManagerImpl implements RpcManager {
       return t;
    }
 
+   // mainly for unit testing
+   public void setTransport(Transport t) {
+      this.t = t;
+   }
+
    private ResponseMode getResponseMode(boolean sync) {
       return sync ? ResponseMode.SYNCHRONOUS : ResponseMode.getAsyncResponseMode(configuration);
    }
+
+   // -------------------------------------------- JMX information -----------------------------------------------
 
    /**
     * Checks whether any of the responses are exceptions. If yes, re-throws them (as exceptions or runtime exceptions).
@@ -364,8 +362,6 @@ public class RpcManagerImpl implements RpcManager {
          }
       }
    }
-
-   // -------------------------------------------- JMX information -----------------------------------------------
 
    @ManagedOperation(description = "Resets statistics gathered by this component", displayName = "Reset statistics")
    public void resetStatistics() {
@@ -432,9 +428,17 @@ public class RpcManagerImpl implements RpcManager {
       return totalReplicationTime.get() / replicationCount.get();
    }
 
-   // mainly for unit testing
-   public void setTransport(Transport t) {
-      this.t = t;
+   @ManagedAttribute(description = "Number of nodes in the cluster",
+           displayName = "No. of nodes")
+   public long getNumNodes() {
+      try {
+         Collection<Address> members = this.getMembers();
+         //member can be null if we haven't received the initial topology
+         return members == null ? 1 : members.size();
+      } catch (Throwable throwable) {
+         log.error("Error obtaining Number of Nodes. returning 1", throwable);
+         return 1;
+      }
    }
 
    @Override
