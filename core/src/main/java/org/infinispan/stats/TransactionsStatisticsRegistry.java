@@ -167,7 +167,7 @@ public final class TransactionsStatisticsRegistry {
       TransactionTS lastTS = lastTransactionTS.get();
       if (lastTS != null)
          lastTS.setEndLastTxTs(System.nanoTime());
-      TransactionsStatisticsRegistry.addValueAndFlushIfNeeded(ExposedStatistic.TERMINATION_COST, System.nanoTime() - init, txs instanceof LocalTransactionStatistics);
+      //TransactionsStatisticsRegistry.addValueAndFlushIfNeeded(ExposedStatistic.TERMINATION_COST, System.nanoTime() - init, txs instanceof LocalTransactionStatistics);
    }
 
    public static Object getAttribute(ExposedStatistic param, String transactionClass) {
