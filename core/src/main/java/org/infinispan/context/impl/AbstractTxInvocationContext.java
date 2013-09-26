@@ -45,6 +45,16 @@ public abstract class AbstractTxInvocationContext extends AbstractInvocationCont
 
    private boolean implicitTransaction;
 
+   private boolean alreadyInit = false;
+
+   public boolean isAlreadyInit() {
+      return alreadyInit;
+   }
+
+   public void setAlreadyInit(boolean alreadyInit) {
+      this.alreadyInit = alreadyInit;
+   }
+
    @Override
    public boolean hasModifications() {
       return getModifications() != null && !getModifications().isEmpty();

@@ -33,6 +33,7 @@ import org.infinispan.commands.write.WriteCommand;
 import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.configuration.cache.VersioningScheme;
 import org.infinispan.context.InvocationContext;
+import org.infinispan.context.impl.AbstractTxInvocationContext;
 import org.infinispan.context.impl.TxInvocationContext;
 import org.infinispan.distribution.DistributionManager;
 import org.infinispan.factories.ComponentRegistry;
@@ -183,34 +184,41 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
       Object ret;
       if (TransactionsStatisticsRegistry.isActive() && ctx.isInTxScope()) {
 
+         if (((AbstractTxInvocationContext)ctx).isAlreadyInit()) {
+            return invokeNextInterceptor(ctx, command);
+         }
+
          final TransactionStatistics transactionStatistics = initStatsIfNecessary(ctx);
          transactionStatistics.notifyRead();
          long currCpuTime = 0;
-         boolean isRemoteKey = isRemote(command.getKey());
-         if (isRemoteKey && fineGrainedStats) {
-            currCpuTime = TransactionsStatisticsRegistry.getThreadCPUTime();
-         }
+         boolean isRemoteKey;
          long currTimeForAllGetCommand = 0;
+
          if (fineGrainedStats) {
+            isRemoteKey = isRemote(command.getKey());
+            if (isRemoteKey) {
+               currCpuTime = TransactionsStatisticsRegistry.getThreadCPUTime();
+            }
+
             currTimeForAllGetCommand = System.nanoTime();
             transactionStatistics.addNTBCValue(currTimeForAllGetCommand);
+
          }
          ret = invokeNextInterceptor(ctx, command);
-         long lastTimeOp = fineGrainedStats ? System.nanoTime() : 0;
-         if (isRemoteKey) {
-            transactionStatistics.incrementValue(NUM_LOCAL_REMOTE_GET);
-            if (fineGrainedStats) {
+         if (fineGrainedStats) {
+            long lastTimeOp = System.nanoTime();
+            if (isRemoteKey) {
+               transactionStatistics.incrementValue(NUM_LOCAL_REMOTE_GET);
                transactionStatistics.addValue(LOCAL_REMOTE_GET_R, lastTimeOp - currTimeForAllGetCommand);
                if (TransactionsStatisticsRegistry.isSampleServiceTime())
                   transactionStatistics.addValue(LOCAL_REMOTE_GET_S, TransactionsStatisticsRegistry.getThreadCPUTime() - currCpuTime);
+
             }
-         }
-         if (fineGrainedStats) {
             transactionStatistics.addValue(ALL_GET_EXECUTION, lastTimeOp - currTimeForAllGetCommand);
             transactionStatistics.setLastOpTimestamp(lastTimeOp);
-         }
-         transactionStatistics.incrementValue(NUM_GET);
 
+            transactionStatistics.incrementValue(NUM_GET);
+         }
       } else {
          ret = invokeNextInterceptor(ctx, command);
       }
@@ -228,9 +236,9 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
       }
 
       TransactionStatistics transactionStatistics = initStatsIfNecessary(ctx);
-      long currCpuTime  = TransactionsStatisticsRegistry.getThreadCPUTime();
+      long currCpuTime = TransactionsStatisticsRegistry.getThreadCPUTime();
       long currTime = System.nanoTime();
-      if(fineGrainedStats)transactionStatistics.addNTBCValue(currTime);
+      if (fineGrainedStats) transactionStatistics.addNTBCValue(currTime);
       transactionStatistics.attachId(ctx.getGlobalTransaction());
       if (LockRelatedStatsHelper.shouldAppendLocks(configuration, true, !ctx.isOriginLocal())) {
          if (log.isTraceEnabled())
@@ -2383,6 +2391,7 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
 
    private TransactionStatistics initStatsIfNecessary(InvocationContext ctx) {
       if (ctx.isInTxScope()) {
+         ((AbstractTxInvocationContext)ctx).setAlreadyInit(true);
          TransactionStatistics transactionStatistics = TransactionsStatisticsRegistry
                .initTransactionIfNecessary((TxInvocationContext) ctx);
          if (transactionStatistics == null) {
