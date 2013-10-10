@@ -23,7 +23,6 @@
 package org.infinispan.reconfigurableprotocol.protocol;
 
 import org.infinispan.configuration.cache.Configurations;
-import org.infinispan.interceptors.PassiveReplicationInterceptor;
 import org.infinispan.interceptors.base.CommandInterceptor;
 import org.infinispan.reconfigurableprotocol.ReconfigurableProtocol;
 import org.infinispan.remoting.transport.Address;
@@ -145,12 +144,17 @@ public class PassiveReplicationCommitProtocol extends ReconfigurableProtocol {
       EnumMap<InterceptorType, CommandInterceptor> interceptors = buildDefaultInterceptorChain();
 
       //Custom interceptor after TxInterceptor
-      interceptors.put(InterceptorType.CUSTOM_INTERCEPTOR_AFTER_TX_INTERCEPTOR,
+     /* interceptors.put(InterceptorType.CUSTOM_INTERCEPTOR_AFTER_TX_INTERCEPTOR,
                        createInterceptor(new PassiveReplicationInterceptor(), PassiveReplicationInterceptor.class));
 
       if (log.isTraceEnabled()) {
          log.tracef("Building interceptor chain for Passive Replication protocol %s", interceptors);
       }
+     */
+      //just to be sure!
+      System.out.println("Removing PassiveReplicationInterceptor  for PR");
+      log.warn("Removing PassiveReplicationInterceptor  for PR");
+
 
       return interceptors;
    }
