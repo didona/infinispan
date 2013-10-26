@@ -290,7 +290,15 @@ public enum ExposedStatistic {
    TO_GMU_PREPARE_COMMAND_SERVICE_TIME(false, true),
    NUM_TO_GMU_PREPARE_COMMAND_SERVED(false, true),
    TO_GMU_PREPARE_COMMAND_REMOTE_WAIT(false, true),
-   NUM_TO_GMU_PREPARE_COMMAND_REMOTE_WAITED(false, true);
+   NUM_TO_GMU_PREPARE_COMMAND_REMOTE_WAITED(false, true),
+
+   TX_MANAGER_PREPARED(true,true),
+   NUM_TX_MANAGER_PREPARED(true,true),
+   TX_MANAGER_COMMITTED(true,true),
+   TX_MANAGER_PREPARED_SYNC(true,true),
+   NUM_TX_MANAGER_PREPARED_SYNC(true,true),
+   TX_MANAGER_COMMITTED_SYNC(true,true),
+   ;
 
    public static final int NO_INDEX = -1;
    private static short localStatsSize = 0;

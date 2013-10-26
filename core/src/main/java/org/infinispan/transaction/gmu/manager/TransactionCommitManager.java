@@ -32,8 +32,12 @@ import org.infinispan.context.InvocationContextContainer;
 import org.infinispan.context.impl.TxInvocationContext;
 import org.infinispan.factories.annotations.Inject;
 import org.infinispan.interceptors.gmu.GMUEntryWrappingInterceptor;
+import org.infinispan.jmx.annotations.MBean;
 import org.infinispan.remoting.transport.Address;
 import org.infinispan.remoting.transport.Transport;
+import org.infinispan.stats.ExposedStatistic;
+import org.infinispan.stats.TransactionsStatisticsRegistry;
+import org.infinispan.transaction.LocalTransaction;
 import org.infinispan.transaction.gmu.CommitLog;
 import org.infinispan.transaction.gmu.GMUHelper;
 import org.infinispan.transaction.xa.CacheTransaction;
@@ -51,6 +55,7 @@ import static org.infinispan.transaction.gmu.manager.SortedTransactionQueue.Tran
  * @author Sebastiano Peluso
  * @since 5.2
  */
+@MBean(objectName = "TransactionCommitManager", description = "Component that manages the commit of transactions")
 public class TransactionCommitManager {
 
    //private CommitThread commitThread;
@@ -59,6 +64,7 @@ public class TransactionCommitManager {
    private GMUVersionGenerator versionGenerator;
    private CommitLog commitLog;
    private GarbageCollectorManager garbageCollectorManager;
+
 
    public TransactionCommitManager() {
       sortedTransactionQueue = new SortedTransactionQueue();
@@ -82,6 +88,10 @@ public class TransactionCommitManager {
     * @param fromStateTransfer {@code true} if the transaction is from state transfer.
     */
    public synchronized void prepareTransaction(CacheTransaction cacheTransaction, boolean fromStateTransfer) {
+      long time = 0;
+      final boolean stats = TransactionsStatisticsRegistry.isActive();
+      if (stats)
+         time = System.nanoTime();
       long concurrentClockNumber = commitLog.getCurrentVersion().getThisNodeVersionValue();
       EntryVersion txVersion = !fromStateTransfer ? commitLog.getCurrentVersion() :
             versionGenerator.mergeAndMax(commitLog.getCurrentVersion(), cacheTransaction.getTransactionVersion());
@@ -90,6 +100,11 @@ public class TransactionCommitManager {
 
       cacheTransaction.setTransactionVersion(preparedVersion);
       sortedTransactionQueue.prepare(cacheTransaction, concurrentClockNumber);
+      if (stats) {
+         time = System.nanoTime() - time;
+         TransactionsStatisticsRegistry.addValueAndFlushIfNeeded(ExposedStatistic.TX_MANAGER_PREPARED, time, cacheTransaction instanceof LocalTransaction);
+         TransactionsStatisticsRegistry.incrementValueAndFlushIfNeeded(ExposedStatistic.NUM_TX_MANAGER_PREPARED, cacheTransaction instanceof LocalTransaction);
+      }
    }
 
    /**
@@ -131,11 +146,19 @@ public class TransactionCommitManager {
    }
 
    public synchronized TransactionEntry commitTransaction(GlobalTransaction globalTransaction, EntryVersion version) {
+      long time = 0;
+      final boolean stats = TransactionsStatisticsRegistry.isActive();
+      if (false && stats)    //No commit profiling for the moment
+         time = System.nanoTime();
       final GMUVersion commitVersion = (GMUVersion) version;
       lastPreparedVersion = Math.max(commitVersion.getThisNodeVersionValue(), lastPreparedVersion);
       TransactionEntry entry = sortedTransactionQueue.commit(globalTransaction, commitVersion);
       if (entry == null) {
          commitLog.updateMostRecentVersion(commitVersion);
+      }
+      if (false && stats) {
+         time = System.nanoTime() - time;
+         TransactionsStatisticsRegistry.addValueAndFlushIfNeeded(ExposedStatistic.TX_MANAGER_COMMITTED, time, !globalTransaction.isRemote());
       }
       return entry;
    }
@@ -160,7 +183,7 @@ public class TransactionCommitManager {
       return entry;
    }
 
-   public EntryVersion computeFinalCommitVersionOnStateTransfer(EntryVersion preparedVersion, EntryVersion proposal, Address sender, Address destination){
+   public EntryVersion computeFinalCommitVersionOnStateTransfer(EntryVersion preparedVersion, EntryVersion proposal, Address sender, Address destination) {
 
       EntryVersion[] versions = new EntryVersion[2];
       versions[0] = preparedVersion;
@@ -211,17 +234,16 @@ public class TransactionCommitManager {
             }
             CacheTransaction cacheTransaction = toCommit.getCacheTransactionForCommit();
             CommittedTransaction committedTransaction = null;
-            if(cacheTransaction == null){
+            if (cacheTransaction == null) {
                //This entry is not associated to a CacheTransaction. This one is associated to a shadow transaction.
                committedTransaction = new CommittedTransaction(toCommit.getVersion(), subVersion, toCommit.getConcurrentClockNumber());
-            }
-            else{
+            } else {
                committedTransaction = new CommittedTransaction(cacheTransaction, subVersion, toCommit.getConcurrentClockNumber());
             }
 
             TxInvocationContext context = null;
 
-            if(cacheTransaction != null){
+            if (cacheTransaction != null) {
                if (ctx != null && currentEntry.getGlobalTransaction() != null && currentEntry.getGlobalTransaction().equals(toCommit.getGlobalTransaction())) {
                   GMUInterceptor.updateCommitVersion(ctx, cacheTransaction, subVersion);
                   context = ctx;
@@ -232,11 +254,9 @@ public class TransactionCommitManager {
                toCommit.setNewVersionInDataContainer((GMUCacheEntryVersion) context.getCacheTransaction().getTransactionVersion());
 
                GMUInterceptor.commitContextEntries(context, false, false);
-            }
-            else{
+            } else {
                toCommit.setNewVersionInDataContainer(GMUInterceptor.inferCommitVersion(toCommit.getVersion(), subVersion));
             }
-
 
 
             committedTransactions.add(committedTransaction);
@@ -245,7 +265,7 @@ public class TransactionCommitManager {
             subVersion++;
          }
          for (SortedTransactionQueue.TransactionEntry txEntry : committedTransactionEntries) {
-            if(txEntry.getGlobalTransaction() != null)
+            if (txEntry.getGlobalTransaction() != null)
                GMUInterceptor.store(txEntry.getGlobalTransaction());
          }
          transactionCommitted(committedTransactions, committedTransactionEntries);

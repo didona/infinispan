@@ -2223,6 +2223,18 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
       return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(NUM_COMMITTED_RO_TX, txClass));
    }
 
+   @ManagedAttribute(description = "Time to insert a local xact in the queue upon prepare",
+                     displayName = "Local xact time to prepare queue")
+   public final long getLocalXactTimeToAddInQueuePrepareNoWait() {
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(TX_MANAGER_PREPARED, null));
+   }
+
+   @ManagedAttribute(description = "Time to insert a local xact in the queue upon prepare with wait time",
+                     displayName = "Local xact time to prepare queue with wait time")
+   public final long getLocalXactTimeToAddInQueuePrepareWithWait() {
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(TX_MANAGER_PREPARED_SYNC, null));
+   }
+
    //NB: readOnly transactions are never aborted (RC, RR, GMU)
    private void handleRollbackCommand(TransactionStatistics transactionStatistics, long initTime, long initCpuTime, TxInvocationContext ctx) {
       ExposedStatistic stat, cpuStat, counter;

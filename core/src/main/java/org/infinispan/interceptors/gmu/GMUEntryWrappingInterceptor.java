@@ -63,6 +63,7 @@ import org.infinispan.loaders.CacheLoaderManager;
 import org.infinispan.loaders.CacheStore;
 import org.infinispan.remoting.responses.Response;
 import org.infinispan.remoting.transport.Address;
+import org.infinispan.stats.ExposedStatistic;
 import org.infinispan.stats.TransactionsStatisticsRegistry;
 import org.infinispan.stats.container.TransactionStatistics;
 import org.infinispan.transaction.LocalTransaction;
@@ -107,6 +108,7 @@ public class GMUEntryWrappingInterceptor extends EntryWrappingInterceptor {
    private CacheLoaderManager cacheLoaderManager;
    private CacheStore store;
    private CommitLog commitLog;
+
 
    @Inject
    public void inject(TransactionCommitManager transactionCommitManager,
@@ -352,6 +354,7 @@ public class GMUEntryWrappingInterceptor extends EntryWrappingInterceptor {
       boolean fromStateTransfer = ctx.isOriginLocal() && ((LocalTransaction) ctx.getCacheTransaction()).isFromStateTransfer();
       boolean hasToUpdateLocalKeys = fromStateTransfer || hasLocalKeysToUpdate(command.getModifications());
       boolean isReadOnly = command.getModifications().length == 0;
+      long time = 0;
 
       if (!hasToUpdateLocalKeys) {
          for (WriteCommand writeCommand : command.getModifications()) {
@@ -370,7 +373,15 @@ public class GMUEntryWrappingInterceptor extends EntryWrappingInterceptor {
          GMUVersion maxGMUVersion = versionGenerator.calculateMaxVersionToRead(transactionVersion, addressList);
          cdl.performReadSetValidation(ctx, command, commitLog.getAvailableVersionLessThan(maxGMUVersion));
          if (hasToUpdateLocalKeys) {
+            final boolean stats = TransactionsStatisticsRegistry.isActive();
+            if (stats)
+               time = System.nanoTime();
             transactionCommitManager.prepareTransaction(ctx.getCacheTransaction(), fromStateTransfer);
+            if (stats) {
+               time = System.nanoTime() - time;
+               TransactionsStatisticsRegistry.addValueAndFlushIfNeeded(ExposedStatistic.TX_MANAGER_PREPARED_SYNC, time, ctx.isOriginLocal());
+               TransactionsStatisticsRegistry.incrementValueAndFlushIfNeeded(NUM_TX_MANAGER_PREPARED_SYNC, ctx.isOriginLocal());
+            }
          } else {
             transactionCommitManager.prepareReadOnlyTransaction(ctx.getCacheTransaction());
          }
@@ -553,13 +564,13 @@ public class GMUEntryWrappingInterceptor extends EntryWrappingInterceptor {
    }
 
    public void updateCommitVersion(TxInvocationContext context, CacheTransaction cacheTransaction, int subVersion) {
-      GMUCacheEntryVersion newVersion = inferCommitVersion(cacheTransaction.getTransactionVersion(),subVersion);
+      GMUCacheEntryVersion newVersion = inferCommitVersion(cacheTransaction.getTransactionVersion(), subVersion);
       context.getCacheTransaction().setTransactionVersion(newVersion);
 
    }
 
    public TxInvocationContext createInvocationContext(CacheTransaction cacheTransaction, int subVersion) {
-      GMUCacheEntryVersion cacheEntryVersion = inferCommitVersion(cacheTransaction.getTransactionVersion(),subVersion);
+      GMUCacheEntryVersion cacheEntryVersion = inferCommitVersion(cacheTransaction.getTransactionVersion(), subVersion);
 
       cacheTransaction.setTransactionVersion(cacheEntryVersion);
       if (cacheTransaction instanceof LocalTransaction) {
