@@ -2235,6 +2235,30 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
       return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(TX_MANAGER_PREPARED_SYNC, null));
    }
 
+   @ManagedAttribute(description = "GetMaxVersion",
+                     displayName = "GetMaxVersion")
+   public final long getLocalXactTimeGetMaxVersion() {
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(GET_MAX_VERSION, null));
+   }
+
+   @ManagedAttribute(description = "UpdatePrepareVersion",
+                     displayName = "UpdatePrepareVersion")
+   public final long getLocalXactTimeUpdatePrepareVersion() {
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(UPDATE_PREPARE_VERSION, null));
+   }
+
+   @ManagedAttribute(description = "GetMaxVersionRem",
+                     displayName = "GetMaxVersionRem")
+   public final long getRemoteXactTimeGetMaxVersion() {
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(GET_MAX_VERSION_REM, null));
+   }
+
+   @ManagedAttribute(description = "GetMaxVersionRem",
+                     displayName = "GetMaxVersionRem")
+   public final long getRemoteXactTimeUpdatePrepareVersion() {
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(UPDATE_PREPARE_VERSION_REM, null));
+   }
+
    //NB: readOnly transactions are never aborted (RC, RR, GMU)
    private void handleRollbackCommand(TransactionStatistics transactionStatistics, long initTime, long initCpuTime, TxInvocationContext ctx) {
       ExposedStatistic stat, cpuStat, counter;

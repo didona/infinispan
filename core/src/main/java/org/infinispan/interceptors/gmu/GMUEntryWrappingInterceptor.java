@@ -355,6 +355,8 @@ public class GMUEntryWrappingInterceptor extends EntryWrappingInterceptor {
       boolean hasToUpdateLocalKeys = fromStateTransfer || hasLocalKeysToUpdate(command.getModifications());
       boolean isReadOnly = command.getModifications().length == 0;
       long time = 0;
+      final TransactionStatistics stat = TransactionsStatisticsRegistry.getTransactionStatistics();
+      final boolean stats = stat != null;
 
       if (!hasToUpdateLocalKeys) {
          for (WriteCommand writeCommand : command.getModifications()) {
@@ -366,21 +368,41 @@ public class GMUEntryWrappingInterceptor extends EntryWrappingInterceptor {
       }
 
       if (!isReadOnly || fromStateTransfer) {
+         if (stats) {
+            time = System.nanoTime();
+         }
          updatePrepareVersion(command);
+         if (stats) {
+            time = System.nanoTime() - time;
+            stat.addValue(ExposedStatistic.UPDATE_PREPARE_VERSION, time);
+            stat.incrementValue(NUM_UPDATE_PREPARE_VERSION);
+         }
          final GMUVersion transactionVersion = (GMUVersion) command.getPrepareVersion();
          List<Address> addressList = fromAlreadyReadFromMask(command.getAlreadyReadFrom(), versionGenerator,
                                                              transactionVersion.getViewId());
          GMUVersion maxGMUVersion = versionGenerator.calculateMaxVersionToRead(transactionVersion, addressList);
+         if (stats) {
+            time = System.nanoTime();
+         }
          cdl.performReadSetValidation(ctx, command, commitLog.getAvailableVersionLessThan(maxGMUVersion));
+         if (stats) {
+            time = System.nanoTime() - time;
+            stat.addValue(ExposedStatistic.GET_MAX_VERSION, time);
+            stat.incrementValue(NUM_GET_MAX_VERSION);
+            //TransactionsStatisticsRegistry.addValueAndFlushIfNeeded(ExposedStatistic.GET_MAX_VERSION, time, ctx.isOriginLocal());
+            //TransactionsStatisticsRegistry.incrementValueAndFlushIfNeeded(NUM_GET_MAX_VERSION, ctx.isOriginLocal());
+         }
          if (hasToUpdateLocalKeys) {
-            final boolean stats = TransactionsStatisticsRegistry.isActive();
+
             if (stats)
                time = System.nanoTime();
             transactionCommitManager.prepareTransaction(ctx.getCacheTransaction(), fromStateTransfer);
             if (stats) {
                time = System.nanoTime() - time;
-               TransactionsStatisticsRegistry.addValueAndFlushIfNeeded(ExposedStatistic.TX_MANAGER_PREPARED_SYNC, time, ctx.isOriginLocal());
-               TransactionsStatisticsRegistry.incrementValueAndFlushIfNeeded(NUM_TX_MANAGER_PREPARED_SYNC, ctx.isOriginLocal());
+               stat.addValue(ExposedStatistic.TX_MANAGER_PREPARED_SYNC, time);
+               stat.incrementValue(ExposedStatistic.NUM_TX_MANAGER_PREPARED_SYNC);
+               //TransactionsStatisticsRegistry.addValueAndFlushIfNeeded(ExposedStatistic.TX_MANAGER_PREPARED_SYNC, time, ctx.isOriginLocal());
+               //TransactionsStatisticsRegistry.incrementValueAndFlushIfNeeded(NUM_TX_MANAGER_PREPARED_SYNC, ctx.isOriginLocal());
             }
          } else {
             transactionCommitManager.prepareReadOnlyTransaction(ctx.getCacheTransaction());

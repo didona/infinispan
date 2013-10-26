@@ -298,6 +298,12 @@ public enum ExposedStatistic {
    TX_MANAGER_PREPARED_SYNC(true,true),
    NUM_TX_MANAGER_PREPARED_SYNC(true,true),
    TX_MANAGER_COMMITTED_SYNC(true,true),
+   NUM_GET_MAX_VERSION(true,true),
+   GET_MAX_VERSION(true,true),
+   GET_MAX_VERSION_REM(true,true),  //only for query
+   UPDATE_PREPARE_VERSION(true,true),
+   NUM_UPDATE_PREPARE_VERSION(true,true),
+   UPDATE_PREPARE_VERSION_REM(true,true),       //only for query
    ;
 
    public static final int NO_INDEX = -1;

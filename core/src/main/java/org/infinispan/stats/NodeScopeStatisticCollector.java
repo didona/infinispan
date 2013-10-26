@@ -654,6 +654,14 @@ public class NodeScopeStatisticCollector {
             return microAvgLocal(snapshot, NUM_TX_MANAGER_PREPARED, TX_MANAGER_PREPARED);
          case TX_MANAGER_PREPARED_SYNC:
             return microAvgLocal(snapshot, NUM_TX_MANAGER_PREPARED_SYNC, TX_MANAGER_PREPARED_SYNC);
+         case GET_MAX_VERSION:
+            return microAvgLocal(snapshot, NUM_GET_MAX_VERSION, GET_MAX_VERSION);
+         case UPDATE_PREPARE_VERSION:
+            return microAvgLocal(snapshot, NUM_UPDATE_PREPARE_VERSION, UPDATE_PREPARE_VERSION);
+         case GET_MAX_VERSION_REM:
+            return microAvgRemote(snapshot, NUM_GET_MAX_VERSION, GET_MAX_VERSION);
+         case UPDATE_PREPARE_VERSION_REM:
+            return microAvgRemote(snapshot, NUM_UPDATE_PREPARE_VERSION, UPDATE_PREPARE_VERSION);
          default:
             throw new NoIspnStatException("Invalid statistic " + param);
       }
