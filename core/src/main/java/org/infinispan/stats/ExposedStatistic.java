@@ -42,14 +42,12 @@ public enum ExposedStatistic {
    NUM_REMOTE_ABORTED_LOCKS(true, true),
    NUM_HELD_LOCKS(true, true),            // C
    NUM_HELD_LOCKS_SUCCESS_TX(true, false),   // L
-
    NUM_COMMITTED_RO_TX(true, true), // C
    NUM_COMMITTED_WR_TX(true, true), // C
    NUM_ABORTED_WR_TX(true, true),   // C
    NUM_ABORTED_RO_TX(true, true),   // C
    NUM_COMMITS(false, false),  //ONLY FOR QUERY
    NUM_LOCAL_COMMITS(false, false),  //ONLY FOR QUERY
-
    NUM_PREPARES(true, false), // L
    LOCAL_EXEC_NO_CONT(true, false),            // L
    LOCAL_CONTENTION_PROBABILITY(false, false),  // ONLY FOR QUERY, derived on the fly
@@ -84,52 +82,42 @@ public enum ExposedStatistic {
    RO_TX_SUCCESSFUL_EXECUTION_TIME(true, true), //C
    RO_TX_ABORTED_EXECUTION_TIME(true, true),    //C
    APPLICATION_CONTENTION_FACTOR(false, false), // ONLY FOR QUERY
-
    NUM_WRITE_SKEW(true, false), // L
    WRITE_SKEW_PROBABILITY(false, false), // ONLY FOR QUERY
-
    //Abort rate, arrival rate and throughput
    ABORT_RATE(false, false),     // ONLY FOR QUERY, derived on the fly
    ARRIVAL_RATE(false, false),   // ONLY FOR QUERY, derived on the fly
    THROUGHPUT(false, false),     // ONLY FOR QUERY, derived on the fly
-
    //Percentile stuff
    RO_LOCAL_PERCENTILE(false, false),  // ONLY FOR QUERY, derived on the fly
    WR_LOCAL_PERCENTILE(false, false),  // ONLY FOR QUERY, derived on the fly
    RO_REMOTE_PERCENTILE(false, false), // ONLY FOR QUERY, derived on the fly
    WR_REMOTE_PERCENTILE(false, false), // ONLY FOR QUERY, derived on the fly
-
    //Prepare, rollback and commit execution times
    ROLLBACK_EXECUTION_TIME(true, true),   // C
    NUM_ROLLBACKS(true, true),             // C
    LOCAL_ROLLBACK_EXECUTION_TIME(false, false),    // ONLY FOR QUERY, derived on the fly
    REMOTE_ROLLBACK_EXECUTION_TIME(false, false),   // ONLY FOR QUERY, derived on the fly
-
    //COMMIT_EXECUTION_TIME(true, true),     // C
    NUM_COMMIT_COMMAND(true, true),        // C
    LOCAL_COMMIT_EXECUTION_TIME(false, false),      // ONLY FOR QUERY, derived on the fly
    REMOTE_COMMIT_EXECUTION_TIME(false, false),     // ONLY FOR QUERY, derived on the fly
-
    PREPARE_EXECUTION_TIME(true, true),    // C
    NUM_PREPARE_COMMAND(true, true),       // C
    LOCAL_PREPARE_EXECUTION_TIME(false, false),     // ONLY FOR QUERY, derived on the fly
    REMOTE_PREPARE_EXECUTION_TIME(false, false),    // ONLY FOR QUERY, derived on the fly
-
    TX_COMPLETE_NOTIFY_EXECUTION_TIME(false, true),    // R
    NUM_TX_COMPLETE_NOTIFY_COMMAND(false, true),       // R
-
    //Lock querying
    NUM_LOCK_PER_LOCAL_TX(false, false),         // ONLY FOR QUERY, derived on the fly
    NUM_LOCK_PER_REMOTE_TX(false, false),        // ONLY FOR QUERY, derived on the fly
    NUM_LOCK_PER_SUCCESS_LOCAL_TX(false, false), // ONLY FOR QUERY, derived on the fly
-
    //commands size
    PREPARE_COMMAND_SIZE(true, false),        // L
    COMMIT_COMMAND_SIZE(true, false),         // L
    CLUSTERED_GET_COMMAND_SIZE(true, false),  // L
    REMOTE_REMOTE_GET_REPLY_SIZE(false, true), //R
    ROLLBACK_COMMAND_SIZE(true, false),//L
-
    //Lock failed stuff
    NUM_LOCK_FAILED_TIMEOUT(true, false),  //L
    NUM_LOCK_FAILED_DEADLOCK(true, false), //L
@@ -174,11 +162,9 @@ public enum ExposedStatistic {
    TBC_EXECUTION_TIME(true, false),
    TBC_COUNT(true, false),
    TBC(false, false), //Time between operations in Transaction   // ONLY FOR QUERY, derived on the fly
-
    NTBC_EXECUTION_TIME(true, false),
    NTBC_COUNT(true, false),
    NTBC(false, false), //Time between Transactions in a thread   // ONLY FOR QUERY, derived on the fly
-
    RESPONSE_TIME(true, false),
 
    //Service and response Times
@@ -304,17 +290,22 @@ public enum ExposedStatistic {
    UPDATE_PREPARE_VERSION(true, true),
    NUM_UPDATE_PREPARE_VERSION(true, true),
    UPDATE_PREPARE_VERSION_REM(true, true),       //only for query
-
-   GET_FROM_CONTAINER(true, false),
-   NUM_GET_FROM_CONTAINER(true, false),
-   WAIT_FROM_CONTAINER(true, false),
-   NUM_WAIT_FROM_CONTAINER(true, false),
-   CALCULATE_VERSION(true, false),
-   NUM_CALCULATE_VERSION(true, false),
-   CONTAINER_AVAILABLE_VERSION(true, false),
-   NUM_CONTAINER_AVAILABLE_VERSION(true, false),
-   NUM_CONTAINER_FINAL_GET(true,false),
-   CONTAINER_FINAL_GET(true,false);
+   GET_FROM_CONTAINER(true, true),
+   NUM_GET_FROM_CONTAINER(true, true),
+   WAIT_FROM_CONTAINER(true, true),
+   NUM_WAIT_FROM_CONTAINER(true, true),
+   CALCULATE_VERSION(true, true),
+   NUM_CALCULATE_VERSION(true, true),
+   CONTAINER_AVAILABLE_VERSION(true, true),
+   NUM_CONTAINER_AVAILABLE_VERSION(true, true),
+   NUM_CONTAINER_FINAL_GET(true, true),
+   CONTAINER_FINAL_GET(true, true),
+   COMMIT_LOG_GET_READ_VERSION(true, true),
+   NUM_COMMIT_LOG_GET_READ_VERSION(true, true),
+   COMMIT_LOG_GET_AVAILABLE_VERSION_LESS_THAN(true, true),
+   NUM_COMMIT_LOG_GET_AVAILABLE_VERSION_LESS_THAN(true, true),
+   COMMIT_LOG_GET_READ_VERSION_COUNT(true, true),
+   COMMIT_LOG_GET_AVAILABLE_VERSION_LESS_THAN_COUNT(true, true);
 
    public static final int NO_INDEX = -1;
    private static short localStatsSize = 0;
@@ -327,22 +318,6 @@ public enum ExposedStatistic {
    ExposedStatistic(boolean local, boolean remote) {
       this.local = local;
       this.remote = remote;
-   }
-
-   public final int getLocalIndex() {
-      return localIndex;
-   }
-
-   public final int getRemoteIndex() {
-      return remoteIndex;
-   }
-
-   public final boolean isLocal() {
-      return local;
-   }
-
-   public final boolean isRemote() {
-      return remote;
    }
 
    public static int getRemoteStatsSize() {
@@ -362,5 +337,21 @@ public enum ExposedStatistic {
             stat.remoteIndex = remoteStatsSize++;
          }
       }
+   }
+
+   public final int getLocalIndex() {
+      return localIndex;
+   }
+
+   public final int getRemoteIndex() {
+      return remoteIndex;
+   }
+
+   public final boolean isLocal() {
+      return local;
+   }
+
+   public final boolean isRemote() {
+      return remote;
    }
 }

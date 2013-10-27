@@ -35,6 +35,9 @@ import org.infinispan.container.versioning.gmu.GMUVersionGenerator;
 import org.infinispan.factories.annotations.Inject;
 import org.infinispan.factories.annotations.Start;
 import org.infinispan.factories.annotations.Stop;
+import org.infinispan.stats.ExposedStatistic;
+import org.infinispan.stats.TransactionsStatisticsRegistry;
+import org.infinispan.stats.container.TransactionStatistics;
 import org.infinispan.transaction.LocalTransaction;
 import org.infinispan.transaction.gmu.manager.CommittedTransaction;
 import org.infinispan.util.Util;
@@ -44,12 +47,7 @@ import org.infinispan.util.logging.LogFactory;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Set;
+import java.util.*;
 
 import static org.infinispan.container.versioning.InequalVersionComparisonResult.*;
 import static org.infinispan.container.versioning.gmu.GMUVersion.NON_EXISTING;
@@ -138,6 +136,11 @@ public class CommitLog {
          return versionGenerator.updatedVersion(mostRecentVersion);
          //return versionGenerator.updatedVersion(currentVersion.getVersion());
       }
+      TransactionStatistics ts = TransactionsStatisticsRegistry.getTransactionStatistics();
+      final boolean stat = ts != null;
+      long all_init = 0, count = 0;
+      if (stat)
+         all_init = System.nanoTime();
       GMUVersion gmuVersion = (GMUVersion) other;
 
       if (gmuVersion.getThisNodeVersionValue() != NON_EXISTING) {
@@ -158,8 +161,10 @@ public class CommitLog {
       VersionEntry iterator = currentVersion;
 
       while (iterator != null &&
-            (firstFoundPossible == null ||
-                   concurrentClockNumber < iterator.getVersion().getThisNodeVersionValue())) {
+              (firstFoundPossible == null ||
+                      concurrentClockNumber < iterator.getVersion().getThisNodeVersionValue())) {
+         if (stat)
+            count++;
          if (isLessOrEquals(iterator.getVersion(), gmuVersion)) {
             possibleVersion.add(iterator.getVersion());
 
@@ -176,13 +181,24 @@ public class CommitLog {
          }
          iterator = iterator.getPrevious();
       }
-      return versionGenerator.mergeAndMax(possibleVersion.toArray(new GMUVersion[possibleVersion.size()]));
+      GMUVersion ret = versionGenerator.mergeAndMax(possibleVersion.toArray(new GMUVersion[possibleVersion.size()]));
+      if (stat) {
+         ts.addValue(ExposedStatistic.COMMIT_LOG_GET_AVAILABLE_VERSION_LESS_THAN, System.nanoTime() - all_init);
+         ts.incrementValue(ExposedStatistic.NUM_COMMIT_LOG_GET_AVAILABLE_VERSION_LESS_THAN);
+         ts.addValue(ExposedStatistic.COMMIT_LOG_GET_AVAILABLE_VERSION_LESS_THAN_COUNT, count);
+      }
+      return ret;
    }
 
    public final GMUReadVersion getReadVersion(EntryVersion other) {
       if (other == null) {
          return null;
       }
+      TransactionStatistics ts = TransactionsStatisticsRegistry.getTransactionStatistics();
+      final boolean stat = ts != null;
+      long all_init = 0, count = 0;
+      if (stat)
+         all_init = System.nanoTime();
       GMUVersion gmuVersion = (GMUVersion) other;
       GMUReadVersion gmuReadVersion = versionGenerator.convertVersionToRead(gmuVersion);
 
@@ -199,8 +215,10 @@ public class CommitLog {
       VersionEntry iterator = currentVersion;
 
       while (iterator != null &&
-            (firstFoundPossible == null ||
-                   concurrentClockNumber < iterator.getVersion().getThisNodeVersionValue())) {
+              (firstFoundPossible == null ||
+                      concurrentClockNumber < iterator.getVersion().getThisNodeVersionValue())) {
+         if (stat)
+            count++;
          if (iterator.getVersion().getThisNodeVersionValue() <= gmuReadVersion.getThisNodeVersionValue()) {
             if (!isLessOrEquals(iterator.getVersion(), gmuVersion)) {
                if (log.isTraceEnabled()) {
@@ -229,6 +247,11 @@ public class CommitLog {
          }
          iterator = iterator.getPrevious();
       }
+      if (stat) {
+         ts.addValue(ExposedStatistic.COMMIT_LOG_GET_READ_VERSION, System.nanoTime() - all_init);
+         ts.incrementValue(ExposedStatistic.NUM_COMMIT_LOG_GET_READ_VERSION);
+         ts.addValue(ExposedStatistic.COMMIT_LOG_GET_READ_VERSION_COUNT, count);
+      }
       return gmuReadVersion;
    }
 
@@ -241,8 +264,8 @@ public class CommitLog {
             log.tracef("insertNewCommittedVersions(...) ==> add %s", transaction.getCommitVersion());
          }
          VersionEntry current = new VersionEntry((GMUVersion) transaction.getCommitVersion(),
-                                                 getAffectedKeys(transaction.getModifications()),
-                                                 transaction.getSubVersion(), transaction.getConcurrentClockNumber());
+                 getAffectedKeys(transaction.getModifications()),
+                 transaction.getSubVersion(), transaction.getConcurrentClockNumber());
          current.setPrevious(oldCurrentVersion);
          oldCurrentVersion = current;
          oldMostRecentVersion = versionGenerator.mergeAndMax(oldMostRecentVersion, oldCurrentVersion.getVersion());
@@ -284,7 +307,7 @@ public class CommitLog {
       }
       if (log.isTraceEnabled()) {
          log.tracef("waitForVersion(%s) ==> %s TRUE ?", version,
-                    currentVersion.getVersion().getThisNodeVersionValue());
+                 currentVersion.getVersion().getThisNodeVersionValue());
       }
    }
 
@@ -434,11 +457,11 @@ public class CommitLog {
       @Override
       public String toString() {
          return "VersionEntry{" +
-               "version=" + version +
-               ", subVersion=" + subVersion +
-               ", concurrentClockNumber=" + concurrentClockNumber +
-               ", keysModified=" + (keysModified == null ? "ALL" : Arrays.asList(keysModified)) +
-               '}';
+                 "version=" + version +
+                 ", subVersion=" + subVersion +
+                 ", concurrentClockNumber=" + concurrentClockNumber +
+                 ", keysModified=" + (keysModified == null ? "ALL" : Arrays.asList(keysModified)) +
+                 '}';
       }
 
       public final void dumpTo(BufferedWriter writer) throws IOException {
