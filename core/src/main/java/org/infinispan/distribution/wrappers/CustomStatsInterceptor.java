@@ -2283,6 +2283,12 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
       return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(CONTAINER_AVAILABLE_VERSION, null));
    }
 
+   @ManagedAttribute(description = "LocalXactTimeGMUContainerFinalGet",
+                     displayName = "LocalXactTimeGMUContainerFinalGet")
+   public final long getLocalXactTimeGMUContainerFinalGet() {
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(CONTAINER_FINAL_GET, null));
+   }
+
    //NB: readOnly transactions are never aborted (RC, RR, GMU)
    private void handleRollbackCommand(TransactionStatistics transactionStatistics, long initTime, long initCpuTime, TxInvocationContext ctx) {
       ExposedStatistic stat, cpuStat, counter;

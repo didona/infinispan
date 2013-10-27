@@ -670,6 +670,8 @@ public class NodeScopeStatisticCollector {
             return microAvgLocal(snapshot, NUM_CALCULATE_VERSION, CALCULATE_VERSION);
          case CONTAINER_AVAILABLE_VERSION:
             return microAvgLocal(snapshot, NUM_CONTAINER_AVAILABLE_VERSION, CONTAINER_AVAILABLE_VERSION);
+         case CONTAINER_FINAL_GET:
+            return microAvgLocal(snapshot, NUM_CONTAINER_FINAL_GET,CONTAINER_FINAL_GET);
          default:
             throw new NoIspnStatException("Invalid statistic " + param);
       }

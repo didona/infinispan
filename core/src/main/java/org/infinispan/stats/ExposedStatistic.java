@@ -312,7 +312,9 @@ public enum ExposedStatistic {
    CALCULATE_VERSION(true, false),
    NUM_CALCULATE_VERSION(true, false),
    CONTAINER_AVAILABLE_VERSION(true, false),
-   NUM_CONTAINER_AVAILABLE_VERSION(true, false);
+   NUM_CONTAINER_AVAILABLE_VERSION(true, false),
+   NUM_CONTAINER_FINAL_GET(true,false),
+   CONTAINER_FINAL_GET(true,false);
 
    public static final int NO_INDEX = -1;
    private static short localStatsSize = 0;

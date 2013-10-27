@@ -136,22 +136,28 @@ public class GMUEntryFactoryImpl extends EntryFactoryImpl {
             //ignore...
          }
       }
-      init = end;
 
       EntryVersion maxVersionToRead;
       if (hasAlreadyReadFromThisNode)
          maxVersionToRead = versionToRead;
       else {
+         if (stats)
+            init = System.nanoTime();
          maxVersionToRead = commitLog.getAvailableVersionLessThan(versionToRead);
          if (stats) {
             ts.addValue(ExposedStatistic.CONTAINER_AVAILABLE_VERSION, System.nanoTime() - init);
             ts.incrementValue(ExposedStatistic.NUM_CONTAINER_AVAILABLE_VERSION);
          }
       }
-
+      if (stats) {
+         init = System.nanoTime();
+      }
       final EntryVersion mostRecentCommitLogVersion = commitLog.getCurrentVersion();
       final InternalGMUCacheEntry entry = (InternalGMUCacheEntry) container.get(key, maxVersionToRead);
-
+      if (stats) {
+         ts.addValue(ExposedStatistic.CONTAINER_FINAL_GET, System.nanoTime() - init);
+         ts.incrementValue(ExposedStatistic.NUM_CONTAINER_FINAL_GET);
+      }
       if (remoteRead) {
          if (entry.getMaximumValidVersion() == null) {
             entry.setMaximumValidVersion(mostRecentCommitLogVersion);
