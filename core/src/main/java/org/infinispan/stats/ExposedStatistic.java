@@ -144,8 +144,8 @@ public enum ExposedStatistic {
    RTT_ROLLBACK(true, false),       // L
    NUM_RTTS_GET(true, false),       // L
    RTT_GET(true, false),            // L
-   RTT_GET_NO_WAIT(true,false),
-   NUM_RTT_GET_NO_WAIT(true,false),
+   RTT_GET_NO_WAIT(true, false),
+   NUM_RTT_GET_NO_WAIT(true, false),
 
    //SEND STUFF: everything is local && asynchronous communication .
    //NUM refers to the number of nodes INVOLVED in the distributed synchronization phases
@@ -166,8 +166,8 @@ public enum ExposedStatistic {
    NUM_NODES_ROLLBACK(true, false),          //L
    NUM_NODES_COMPLETE_NOTIFY(true, false),   //L
    NUM_NODES_GET(true, false),               //L
-   NUM_REMOTE_NODES_READ_RO_TX(true,false),
-   NUM_REMOTE_NODES_READ_WR_TX(true,false),
+   NUM_REMOTE_NODES_READ_RO_TX(true, false),
+   NUM_REMOTE_NODES_READ_WR_TX(true, false),
 
 
    //Additional Stats
@@ -278,8 +278,8 @@ public enum ExposedStatistic {
    NUM_GMU_WAITING_IN_QUEUE_DUE_CONFLICT_VERSION_LOCAL(false, false),
    NUM_GMU_WAITING_IN_QUEUE_DUE_CONFLICT_VERSION_REMOTE(false, false),
    //TO waiting times
-   TO_GMU_PREPARE_COMMAND_RTT_NO_WAIT(true,false),
-   NUM_TO_GMU_PREPARE_COMMAND_RTT_NO_WAITED(true,false),
+   TO_GMU_PREPARE_COMMAND_RTT_NO_WAIT(true, false),
+   NUM_TO_GMU_PREPARE_COMMAND_RTT_NO_WAITED(true, false),
    TO_GMU_PREPARE_COMMAND_NODES_WAITED(true, false),
    NUM_TO_GMU_PREPARE_COMMAND_AT_LEAST_ONE_WAIT(true, false),
    TO_GMU_PREPARE_COMMAND_RTT_MINUS_AVG(true, false),
@@ -292,19 +292,27 @@ public enum ExposedStatistic {
    TO_GMU_PREPARE_COMMAND_REMOTE_WAIT(false, true),
    NUM_TO_GMU_PREPARE_COMMAND_REMOTE_WAITED(false, true),
 
-   TX_MANAGER_PREPARED(true,true),
-   NUM_TX_MANAGER_PREPARED(true,true),
-   TX_MANAGER_COMMITTED(true,true),
-   TX_MANAGER_PREPARED_SYNC(true,true),
-   NUM_TX_MANAGER_PREPARED_SYNC(true,true),
-   TX_MANAGER_COMMITTED_SYNC(true,true),
-   NUM_GET_MAX_VERSION(true,true),
-   GET_MAX_VERSION(true,true),
-   GET_MAX_VERSION_REM(true,true),  //only for query
-   UPDATE_PREPARE_VERSION(true,true),
-   NUM_UPDATE_PREPARE_VERSION(true,true),
-   UPDATE_PREPARE_VERSION_REM(true,true),       //only for query
-   ;
+   TX_MANAGER_PREPARED(true, true),
+   NUM_TX_MANAGER_PREPARED(true, true),
+   TX_MANAGER_COMMITTED(true, true),
+   TX_MANAGER_PREPARED_SYNC(true, true),
+   NUM_TX_MANAGER_PREPARED_SYNC(true, true),
+   TX_MANAGER_COMMITTED_SYNC(true, true),
+   NUM_GET_MAX_VERSION(true, true),
+   GET_MAX_VERSION(true, true),
+   GET_MAX_VERSION_REM(true, true),  //only for query
+   UPDATE_PREPARE_VERSION(true, true),
+   NUM_UPDATE_PREPARE_VERSION(true, true),
+   UPDATE_PREPARE_VERSION_REM(true, true),       //only for query
+
+   GET_FROM_CONTAINER(true, false),
+   NUM_GET_FROM_CONTAINER(true, false),
+   WAIT_FROM_CONTAINER(true, false),
+   NUM_WAIT_FROM_CONTAINER(true, false),
+   CALCULATE_VERSION(true, false),
+   NUM_CALCULATE_VERSION(true, false),
+   CONTAINER_AVAILABLE_VERSION(true, false),
+   NUM_CONTAINER_AVAILABLE_VERSION(true, false);
 
    public static final int NO_INDEX = -1;
    private static short localStatsSize = 0;

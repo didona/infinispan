@@ -538,7 +538,7 @@ public class GMUEntryWrappingInterceptor extends EntryWrappingInterceptor {
          log.tracef("[%s] Keys read in this command: %s", txInvocationContext.getGlobalTransaction().globalId(),
                     txInvocationContext.getKeysReadInCommand());
       }
-
+      //TODO DIEGO:  is this check on all the reads necessary to be done always?
       for (InternalGMUCacheEntry internalGMUCacheEntry : txInvocationContext.getKeysReadInCommand().values()) {
          if (txInvocationContext.hasModifications() && !internalGMUCacheEntry.isMostRecent() && !internalGMUCacheEntry.isUnsafeToRead()) {
             throw new CacheException("Read-Write transaction read an old value and should rollback");

@@ -2259,6 +2259,30 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
       return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(UPDATE_PREPARE_VERSION_REM, null));
    }
 
+   @ManagedAttribute(description = "LocalXactTimeGMUGetFromContainer",
+                     displayName = "LocalXactTimeGMUGetFromContainer")
+   public final long getLocalXactTimeGMUGetFromContainer() {
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(GET_FROM_CONTAINER, null));
+   }
+
+   @ManagedAttribute(description = "LocalXactTimeGMUWaitVersionInContainer",
+                     displayName = "LocalXactTimeGMUWaitVersionInContainer")
+   public final long getLocalXactTimeGMUWaitVersionInContainer() {
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(WAIT_FROM_CONTAINER, null));
+   }
+
+   @ManagedAttribute(description = "LocalXactTimeGMUContainerCalculateVersion",
+                     displayName = "LocalXactTimeGMUContainerCalculateVersion")
+   public final long getLocalXactTimeGMUContainerCalculateVersion() {
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(CALCULATE_VERSION, null));
+   }
+
+   @ManagedAttribute(description = "LocalXactTimeGMUContainerAvailableVersion",
+                     displayName = "LocalXactTimeGMUContainerAvailableVersion")
+   public final long getLocalXactTimeGMUContainerAvailableVersion() {
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(CONTAINER_AVAILABLE_VERSION, null));
+   }
+
    //NB: readOnly transactions are never aborted (RC, RR, GMU)
    private void handleRollbackCommand(TransactionStatistics transactionStatistics, long initTime, long initCpuTime, TxInvocationContext ctx) {
       ExposedStatistic stat, cpuStat, counter;

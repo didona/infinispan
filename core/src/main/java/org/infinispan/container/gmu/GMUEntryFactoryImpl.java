@@ -25,8 +25,6 @@ package org.infinispan.container.gmu;
 import org.infinispan.container.EntryFactoryImpl;
 import org.infinispan.container.entries.InternalCacheEntry;
 import org.infinispan.container.entries.MVCCEntry;
-import org.infinispan.container.entries.NullMarkerEntry;
-import org.infinispan.container.entries.NullMarkerEntryForRemoval;
 import org.infinispan.container.entries.SerializableEntry;
 import org.infinispan.container.entries.gmu.InternalGMUCacheEntry;
 import org.infinispan.container.entries.gmu.InternalGMUNullCacheEntry;
@@ -39,6 +37,9 @@ import org.infinispan.context.SingleKeyNonTxInvocationContext;
 import org.infinispan.context.impl.TxInvocationContext;
 import org.infinispan.factories.annotations.Inject;
 import org.infinispan.interceptors.locking.ClusteringDependentLogic;
+import org.infinispan.stats.ExposedStatistic;
+import org.infinispan.stats.TransactionsStatisticsRegistry;
+import org.infinispan.stats.container.TransactionStatistics;
 import org.infinispan.transaction.gmu.CommitLog;
 import org.infinispan.util.logging.Log;
 import org.infinispan.util.logging.LogFactory;
@@ -85,6 +86,11 @@ public class GMUEntryFactoryImpl extends EntryFactoryImpl {
 
    @Override
    protected InternalCacheEntry getFromContainer(Object key, InvocationContext context) {
+      final TransactionStatistics ts = TransactionsStatisticsRegistry.getTransactionStatistics();
+      final boolean stats = ts != null;
+      long init = 0, end = 0, allInit = 0;
+      if (stats)
+         allInit = System.nanoTime();
       if (context.isOriginLocal() && !clusteringDependentLogic.localNodeIsOwner(key)) {
          //force a remote get...
          return null;
@@ -101,7 +107,15 @@ public class GMUEntryFactoryImpl extends EntryFactoryImpl {
          //                and the version does not matter either (it will be overwritten)
          versionToRead = null;
       } else {
+         if (stats) {
+            init = System.nanoTime();
+         }
          versionToRead = context.calculateVersionToRead(gmuVersionGenerator);
+         if (stats) {
+            end = System.nanoTime();
+            ts.addValue(ExposedStatistic.CALCULATE_VERSION, end - init);
+            ts.incrementValue(ExposedStatistic.NUM_CALCULATE_VERSION);
+         }
       }
 
       boolean hasAlreadyReadFromThisNode = context.hasAlreadyReadOnThisNode();
@@ -110,14 +124,30 @@ public class GMUEntryFactoryImpl extends EntryFactoryImpl {
          //firs read on the local node for a transaction. ensure the min version
          EntryVersion transactionVersion = ((TxInvocationContext) context).getTransactionVersion();
          try {
+            init = end;
             commitLog.waitForVersion(transactionVersion, -1);
+            if (stats) {
+               end = System.nanoTime();
+               ts.addValue(ExposedStatistic.WAIT_FROM_CONTAINER, end - init);
+               ts.incrementValue(ExposedStatistic.NUM_WAIT_FROM_CONTAINER);
+            }
+
          } catch (InterruptedException e) {
             //ignore...
          }
       }
+      init = end;
 
-      final EntryVersion maxVersionToRead = hasAlreadyReadFromThisNode ? versionToRead :
-            commitLog.getAvailableVersionLessThan(versionToRead);
+      EntryVersion maxVersionToRead;
+      if (hasAlreadyReadFromThisNode)
+         maxVersionToRead = versionToRead;
+      else {
+         maxVersionToRead = commitLog.getAvailableVersionLessThan(versionToRead);
+         if (stats) {
+            ts.addValue(ExposedStatistic.CONTAINER_AVAILABLE_VERSION, System.nanoTime() - init);
+            ts.incrementValue(ExposedStatistic.NUM_CONTAINER_AVAILABLE_VERSION);
+         }
+      }
 
       final EntryVersion mostRecentCommitLogVersion = commitLog.getCurrentVersion();
       final InternalGMUCacheEntry entry = (InternalGMUCacheEntry) container.get(key, maxVersionToRead);
@@ -140,7 +170,10 @@ public class GMUEntryFactoryImpl extends EntryFactoryImpl {
       if (log.isTraceEnabled()) {
          log.tracef("Retrieved from container %s", entry);
       }
-
+      if (stats) {
+         ts.addValue(ExposedStatistic.GET_FROM_CONTAINER, System.nanoTime() - allInit);
+         ts.incrementValue(ExposedStatistic.NUM_GET_FROM_CONTAINER);
+      }
       return entry.getInternalCacheEntry();
    }
 }

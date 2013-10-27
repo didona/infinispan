@@ -662,6 +662,14 @@ public class NodeScopeStatisticCollector {
             return microAvgRemote(snapshot, NUM_GET_MAX_VERSION, GET_MAX_VERSION);
          case UPDATE_PREPARE_VERSION_REM:
             return microAvgRemote(snapshot, NUM_UPDATE_PREPARE_VERSION, UPDATE_PREPARE_VERSION);
+         case GET_FROM_CONTAINER:
+            return microAvgLocal(snapshot, NUM_GET_FROM_CONTAINER, GET_FROM_CONTAINER);
+         case WAIT_FROM_CONTAINER:
+            return microAvgLocal(snapshot, NUM_WAIT_FROM_CONTAINER, WAIT_FROM_CONTAINER);
+         case CALCULATE_VERSION:
+            return microAvgLocal(snapshot, NUM_CALCULATE_VERSION, CALCULATE_VERSION);
+         case CONTAINER_AVAILABLE_VERSION:
+            return microAvgLocal(snapshot, NUM_CONTAINER_AVAILABLE_VERSION, CONTAINER_AVAILABLE_VERSION);
          default:
             throw new NoIspnStatException("Invalid statistic " + param);
       }
