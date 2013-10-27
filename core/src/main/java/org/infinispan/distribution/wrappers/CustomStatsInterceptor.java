@@ -2253,8 +2253,8 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
       return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(GET_MAX_VERSION_REM, null));
    }
 
-   @ManagedAttribute(description = "GetMaxVersionRem",
-                     displayName = "GetMaxVersionRem")
+   @ManagedAttribute(description = "UpdatePrepareVersionRem",
+                     displayName = "UpdatePrepareVersionRem")
    public final long getRemoteXactTimeUpdatePrepareVersion() {
       return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(UPDATE_PREPARE_VERSION_REM, null));
    }
