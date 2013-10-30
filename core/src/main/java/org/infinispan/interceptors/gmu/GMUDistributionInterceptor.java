@@ -275,8 +275,10 @@ public class GMUDistributionInterceptor extends TxDistributionInterceptor {
       GlobalTransaction gtx = acquireRemoteLock ? txInvocationContext.getGlobalTransaction() : null;
 
       ConsistentHash pendingCH = stateTransferManager.getCacheTopology().getPendingCH();
-
-      List<Address> allTargets = new ArrayList<Address>(stateTransferManager.getCacheTopology().getWriteConsistentHash().locateOwners(key));
+      //Cloud-TM patch
+      //List<Address> allTargets = new ArrayList<Address>(stateTransferManager.getCacheTopology().getWriteConsistentHash().locateOwners(key));
+      List<Address> allTargets = new ArrayList<Address>();
+      allTargets.add(stateTransferManager.getCacheTopology().getWriteConsistentHash().locatePrimaryOwner(key));
       allTargets.retainAll(rpcManager.getTransport().getMembers());
       List<Address> oldTargets = null;
       if (pendingCH != null) { //We are executing this get during a rebalance
