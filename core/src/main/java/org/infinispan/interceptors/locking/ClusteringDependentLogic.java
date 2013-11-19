@@ -81,12 +81,12 @@ public interface ClusteringDependentLogic {
    Collection<Address> getInvolvedNodes(CacheTransaction cacheTransaction);
 
    EntryVersionsMap createNewVersionsAndCheckForWriteSkews(VersionGenerator versionGenerator, TxInvocationContext context, VersionedPrepareCommand prepareCommand);
-   
+
    /**
     * performs the read set validation
     *
-    * @param context          the transaction context
-    * @param prepareCommand   the prepare command
+    * @param context        the transaction context
+    * @param prepareCommand the prepare command
     * @param readVersion
     */
    void performReadSetValidation(TxInvocationContext context, GMUPrepareCommand prepareCommand, GMUVersion readVersion);
@@ -110,7 +110,7 @@ public interface ClusteringDependentLogic {
       }
 
       protected void notifyCommitEntry(boolean created, boolean removed,
-            boolean evicted, CacheEntry entry, InvocationContext ctx) {
+                                       boolean evicted, CacheEntry entry, InvocationContext ctx) {
          // Eviction has no notion of pre/post event since 4.2.0.ALPHA4.
          // EvictionManagerImpl.onEntryEviction() triggers both pre and post events
          // with non-null values, so we should do the same here as an ugly workaround.
@@ -126,7 +126,7 @@ public interface ClusteringDependentLogic {
 
             // Notify entry modified after container has been updated
             notifier.notifyCacheEntryModified(entry.getKey(),
-                  entry.getValue(), false, ctx);
+                                              entry.getValue(), false, ctx);
 
             // Notify entry created event after container has been updated
             if (created)
@@ -296,7 +296,7 @@ public interface ClusteringDependentLogic {
 
       @Override
       public Collection<Address> getOwners(Set<Object> affectedKeys) {
-         return null;            
+         return null;
       }
 
       @Override
@@ -492,6 +492,11 @@ public interface ClusteringDependentLogic {
       @Override
       public void performReadSetValidation(TxInvocationContext context, GMUPrepareCommand prepareCommand, GMUVersion readVersion) {
          GMUHelper.performReadSetValidation(prepareCommand, dataContainer, this, readVersion);
+
+      }
+
+      public void performReadSetValidationPC(TxInvocationContext context, GMUPrepareCommand prepareCommand, GMUVersion xactVersion, DataContainer dataContainer) {
+         GMUHelper.performReadSetValidationPC(prepareCommand, dataContainer, this, xactVersion, context);
       }
 
       @Override

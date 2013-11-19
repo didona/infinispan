@@ -55,6 +55,7 @@ import org.infinispan.factories.annotations.ComponentName;
 import org.infinispan.factories.annotations.Inject;
 import org.infinispan.factories.annotations.Start;
 import org.infinispan.interceptors.EntryWrappingInterceptor;
+import org.infinispan.interceptors.locking.ClusteringDependentLogic;
 import org.infinispan.jmx.annotations.MBean;
 import org.infinispan.jmx.annotations.ManagedAttribute;
 import org.infinispan.jmx.annotations.ManagedOperation;
@@ -357,6 +358,7 @@ public class GMUEntryWrappingInterceptor extends EntryWrappingInterceptor {
       long time = 0;
       final TransactionStatistics stat = TransactionsStatisticsRegistry.getTransactionStatistics();
       final boolean stats = stat != null;
+      final boolean pseudoCodeValidation = true;
 
       if (!hasToUpdateLocalKeys) {
          for (WriteCommand writeCommand : command.getModifications()) {
@@ -378,19 +380,23 @@ public class GMUEntryWrappingInterceptor extends EntryWrappingInterceptor {
             stat.incrementValue(NUM_UPDATE_PREPARE_VERSION);
          }
          final GMUVersion transactionVersion = (GMUVersion) command.getPrepareVersion();
-         List<Address> addressList = fromAlreadyReadFromMask(command.getAlreadyReadFrom(), versionGenerator,
-                                                             transactionVersion.getViewId());
-         GMUVersion maxGMUVersion = versionGenerator.calculateMaxVersionToRead(transactionVersion, addressList);
-         if (stats) {
-            time = System.nanoTime();
-         }
-         cdl.performReadSetValidation(ctx, command, commitLog.getAvailableVersionLessThan(maxGMUVersion));
-         if (stats) {
-            time = System.nanoTime() - time;
-            stat.addValue(ExposedStatistic.GET_MAX_VERSION, time);
-            stat.incrementValue(NUM_GET_MAX_VERSION);
-            //TransactionsStatisticsRegistry.addValueAndFlushIfNeeded(ExposedStatistic.GET_MAX_VERSION, time, ctx.isOriginLocal());
-            //TransactionsStatisticsRegistry.incrementValueAndFlushIfNeeded(NUM_GET_MAX_VERSION, ctx.isOriginLocal());
+         if (!pseudoCodeValidation) {
+            List<Address> addressList = fromAlreadyReadFromMask(command.getAlreadyReadFrom(), versionGenerator,
+                                                                transactionVersion.getViewId());
+            GMUVersion maxGMUVersion = versionGenerator.calculateMaxVersionToRead(transactionVersion, addressList);
+            if (stats) {
+               time = System.nanoTime();
+            }
+            cdl.performReadSetValidation(ctx, command, commitLog.getAvailableVersionLessThan(maxGMUVersion));
+            if (stats) {
+               time = System.nanoTime() - time;
+               stat.addValue(ExposedStatistic.GET_MAX_VERSION, time);
+               stat.incrementValue(NUM_GET_MAX_VERSION);
+               //TransactionsStatisticsRegistry.addValueAndFlushIfNeeded(ExposedStatistic.GET_MAX_VERSION, time, ctx.isOriginLocal());
+               //TransactionsStatisticsRegistry.incrementValueAndFlushIfNeeded(NUM_GET_MAX_VERSION, ctx.isOriginLocal());
+            }
+         } else { //ReadSet validation according to my (hopefully right) interpretation of the pseudo-code
+            ((ClusteringDependentLogic.DistributionLogic) cdl).performReadSetValidationPC(ctx, command, transactionVersion, dataContainer);
          }
          if (hasToUpdateLocalKeys) {
 
@@ -539,6 +545,8 @@ public class GMUEntryWrappingInterceptor extends EntryWrappingInterceptor {
                     txInvocationContext.getKeysReadInCommand());
       }
       //TODO DIEGO:  is this check on all the reads necessary to be done always?
+
+      //TODO: here I check if an update xact has read something old at runtime. If I pre-mark update xacts, I should act here.
       for (InternalGMUCacheEntry internalGMUCacheEntry : txInvocationContext.getKeysReadInCommand().values()) {
          if (txInvocationContext.hasModifications() && !internalGMUCacheEntry.isMostRecent() && !internalGMUCacheEntry.isUnsafeToRead()) {
             throw new CacheException("Read-Write transaction read an old value and should rollback");

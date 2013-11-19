@@ -92,6 +92,51 @@ public class GMUHelper {
       }
    }
 
+   public static void performReadSetValidationPC(GMUPrepareCommand prepareCommand,
+                                                 DataContainer dataContainer,
+                                                 ClusteringDependentLogic keyLogic, GMUVersion xactVersion, TxInvocationContext ctx) {
+      GlobalTransaction gtx = prepareCommand.getGlobalTransaction();
+      final boolean d = log.isDebugEnabled();
+      if (prepareCommand.getReadSet() == null || prepareCommand.getReadSet().length == 0) {
+         if (d) {
+            log.debugf("Validation of [%s] OK. no read set", gtx.globalId());
+         }
+         return;
+      }
+      boolean valid;
+      for (Object key : prepareCommand.getReadSet()) {
+         //if (keyLogic.localNodeIsOwner(key)) {
+         if (keyLogic.localNodeIsPrimaryOwner(key)) {      //DIE: for now, hardcoded
+            //Giving null as version, in the end you should have the last committed value
+            valid = validate(xactVersion, key, dataContainer, gtx);
+            if (!valid) {
+               throw new ValidationException("Validation failed for key [" + key + "]", key);
+            }
+         } else {
+            if (d) {
+               log.debugf("[%s] Validate [%s]: keys is not local", gtx.globalId(), key);
+            }
+         }
+      }
+   }
+
+   /**
+    * Implementation of the pseudo-code validate method
+    *
+    * @param xactVersion
+    * @param key
+    * @param dataContainer
+    */
+   private static boolean validate(GMUVersion xactVersion, Object key, DataContainer dataContainer, GlobalTransaction gtx) {
+      final InternalGMUCacheEntry mostRecentEntry = (InternalGMUCacheEntry) dataContainer.get(key, null);
+      if (log.isDebugEnabled()) {
+         log.debugf("[%s] Validate [%s]: checking %s", gtx.globalId(), key, mostRecentEntry);
+      }
+      long mostRecentVersionOnThisNode = ((GMUVersion) mostRecentEntry.getVersion()).getThisNodeVersionValue();
+      long xactNodeVersion = xactVersion.getThisNodeVersionValue();
+      return mostRecentVersionOnThisNode <= xactNodeVersion;
+   }
+
    public static EntryVersion calculateCommitVersion(EntryVersion mergedVersion, GMUVersionGenerator versionGenerator,
                                                      Collection<Address> affectedOwners) {
       if (mergedVersion == null) {
@@ -138,8 +183,8 @@ public class GMUHelper {
       ctx.setTransactionVersion(commitVersion);
    }
 
-   public static EntryVersion joinVersions(EntryVersion[] versions, GMUVersionGenerator versionGenerator){
-      if(versions!=null && versions.length>0){
+   public static EntryVersion joinVersions(EntryVersion[] versions, GMUVersionGenerator versionGenerator) {
+      if (versions != null && versions.length > 0) {
          EntryVersion mergedVersion = versionGenerator.mergeAndMax(versions);
          return mergedVersion;
       }
