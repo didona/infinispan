@@ -135,6 +135,7 @@ public class GMUEntryWrappingInterceptor extends EntryWrappingInterceptor {
 
    @Override
    public Object visitPrepareCommand(TxInvocationContext ctx, PrepareCommand command) throws Throwable {
+      final boolean validationPC = true;
       if (command.isOnePhaseCommit()) {
          throw new IllegalStateException("GMU does not support one phase commits.");
       } else if (!ctx.isOriginLocal()) {
@@ -154,20 +155,29 @@ public class GMUEntryWrappingInterceptor extends EntryWrappingInterceptor {
             spc.setReadSet(ctx.getReadSet());
             spc.setAlreadyReadFrom(toAlreadyReadFromMask(ctx.getAlreadyReadFrom(), versionGenerator,
                                                          transactionVersion.getViewId()));
+            if (validationPC)
+               spc.setReadVersion(transactionVersion);
          } else {
-            ctx.setTransactionVersion(spc.getPrepareVersion());
+            if(!validationPC)
+               ctx.setTransactionVersion(spc.getPrepareVersion());
+            else
+               ctx.setTransactionVersion(spc.getReadVersion());
          }
 
          wrapEntriesForPrepare(ctx, command);
          performValidation(ctx, spc);
 
          Object retVal = invokeNextInterceptor(ctx, command);
-
+         //Now the command has been replicated. If everything is right, the coordinator has to compute the final version
+         //The transaction version in the context now diverges from the readVersion, since, when putting the xact in the
+         //prepare queue, a new version is set (though the readVersion is unchanged and will be used by cohorts)
          if (ctx.isOriginLocal() && command.getModifications().length > 0) {
             EntryVersion commitVersion = calculateCommitVersion(ctx.getTransactionVersion(), versionGenerator,
                                                                 cdl.getWriteOwners(ctx.getCacheTransaction()));
             ctx.setTransactionVersion(commitVersion);
-         } else {
+         }
+         //The distribution has done nothing if tha node is not the coordinator...
+         else {
             retVal = ctx.getTransactionVersion();
          }
 
@@ -344,6 +354,14 @@ public class GMUEntryWrappingInterceptor extends EntryWrappingInterceptor {
       }
    }
 
+   protected void performValidation(TxInvocationContext ctx, GMUPrepareCommand command) throws InterruptedException {
+      final boolean pseudoCodeValidation = true;
+      if (!pseudoCodeValidation)
+         performValidationP(ctx, command);
+      else performValidationPC(ctx, command);
+   }
+
+
    /**
     * validates the read set and returns the prepare version from the commit queue
     *
@@ -351,14 +369,14 @@ public class GMUEntryWrappingInterceptor extends EntryWrappingInterceptor {
     * @param command the prepare command
     * @throws InterruptedException if interrupted
     */
-   protected void performValidation(TxInvocationContext ctx, GMUPrepareCommand command) throws InterruptedException {
+   private void performValidationP(TxInvocationContext ctx, GMUPrepareCommand command) throws InterruptedException {
       boolean fromStateTransfer = ctx.isOriginLocal() && ((LocalTransaction) ctx.getCacheTransaction()).isFromStateTransfer();
       boolean hasToUpdateLocalKeys = fromStateTransfer || hasLocalKeysToUpdate(command.getModifications());
       boolean isReadOnly = command.getModifications().length == 0;
       long time = 0;
       final TransactionStatistics stat = TransactionsStatisticsRegistry.getTransactionStatistics();
       final boolean stats = stat != null;
-      final boolean pseudoCodeValidation = true;
+
 
       if (!hasToUpdateLocalKeys) {
          for (WriteCommand writeCommand : command.getModifications()) {
@@ -380,24 +398,79 @@ public class GMUEntryWrappingInterceptor extends EntryWrappingInterceptor {
             stat.incrementValue(NUM_UPDATE_PREPARE_VERSION);
          }
          final GMUVersion transactionVersion = (GMUVersion) command.getPrepareVersion();
-         if (!pseudoCodeValidation) {
-            List<Address> addressList = fromAlreadyReadFromMask(command.getAlreadyReadFrom(), versionGenerator,
-                                                                transactionVersion.getViewId());
-            GMUVersion maxGMUVersion = versionGenerator.calculateMaxVersionToRead(transactionVersion, addressList);
-            if (stats) {
+
+         List<Address> addressList = fromAlreadyReadFromMask(command.getAlreadyReadFrom(), versionGenerator,
+                                                             transactionVersion.getViewId());
+         GMUVersion maxGMUVersion = versionGenerator.calculateMaxVersionToRead(transactionVersion, addressList);
+         if (stats) {
+            time = System.nanoTime();
+         }
+         cdl.performReadSetValidation(ctx, command, commitLog.getAvailableVersionLessThan(maxGMUVersion));
+         if (stats) {
+            time = System.nanoTime() - time;
+            stat.addValue(ExposedStatistic.GET_MAX_VERSION, time);
+            stat.incrementValue(NUM_GET_MAX_VERSION);
+            //TransactionsStatisticsRegistry.addValueAndFlushIfNeeded(ExposedStatistic.GET_MAX_VERSION, time, ctx.isOriginLocal());
+            //TransactionsStatisticsRegistry.incrementValueAndFlushIfNeeded(NUM_GET_MAX_VERSION, ctx.isOriginLocal());
+         }
+
+         if (hasToUpdateLocalKeys) {
+
+            if (stats)
                time = System.nanoTime();
-            }
-            cdl.performReadSetValidation(ctx, command, commitLog.getAvailableVersionLessThan(maxGMUVersion));
+            transactionCommitManager.prepareTransaction(ctx.getCacheTransaction(), fromStateTransfer);
             if (stats) {
                time = System.nanoTime() - time;
-               stat.addValue(ExposedStatistic.GET_MAX_VERSION, time);
-               stat.incrementValue(NUM_GET_MAX_VERSION);
-               //TransactionsStatisticsRegistry.addValueAndFlushIfNeeded(ExposedStatistic.GET_MAX_VERSION, time, ctx.isOriginLocal());
-               //TransactionsStatisticsRegistry.incrementValueAndFlushIfNeeded(NUM_GET_MAX_VERSION, ctx.isOriginLocal());
+               stat.addValue(ExposedStatistic.TX_MANAGER_PREPARED_SYNC, time);
+               stat.incrementValue(ExposedStatistic.NUM_TX_MANAGER_PREPARED_SYNC);
+               //TransactionsStatisticsRegistry.addValueAndFlushIfNeeded(ExposedStatistic.TX_MANAGER_PREPARED_SYNC, time, ctx.isOriginLocal());
+               //TransactionsStatisticsRegistry.incrementValueAndFlushIfNeeded(NUM_TX_MANAGER_PREPARED_SYNC, ctx.isOriginLocal());
             }
-         } else { //ReadSet validation according to my (hopefully right) interpretation of the pseudo-code
-            ((ClusteringDependentLogic.DistributionLogic) cdl).performReadSetValidationPC(ctx, command, transactionVersion, dataContainer);
+         } else {
+            transactionCommitManager.prepareReadOnlyTransaction(ctx.getCacheTransaction());
          }
+      }
+
+      if (log.isDebugEnabled()) {
+         log.debugf("Transaction %s can commit on this node. Prepare Version is %s",
+                    command.getGlobalTransaction().globalId(), ctx.getTransactionVersion());
+      }
+   }
+
+   private void performValidationPC(TxInvocationContext ctx, GMUPrepareCommand command) throws InterruptedException {
+      boolean fromStateTransfer = ctx.isOriginLocal() && ((LocalTransaction) ctx.getCacheTransaction()).isFromStateTransfer();
+      boolean hasToUpdateLocalKeys = fromStateTransfer || hasLocalKeysToUpdate(command.getModifications());
+      boolean isReadOnly = command.getModifications().length == 0;
+      long time = 0;
+      final TransactionStatistics stat = TransactionsStatisticsRegistry.getTransactionStatistics();
+      final boolean stats = stat != null;
+
+
+      if (!hasToUpdateLocalKeys) {
+         for (WriteCommand writeCommand : command.getModifications()) {
+            if (writeCommand instanceof ClearCommand) {
+               hasToUpdateLocalKeys = true;
+               break;
+            }
+         }
+      }
+
+      if (!isReadOnly || fromStateTransfer) {
+         if (stats) {
+            time = System.nanoTime();
+         }
+         //Why should I want to update the prepare version that comes from the coordinator (potentially, me?)
+         //updatePrepareVersion(command);
+         if (stats) {
+            time = System.nanoTime() - time;
+            stat.addValue(ExposedStatistic.UPDATE_PREPARE_VERSION, time);
+            stat.incrementValue(NUM_UPDATE_PREPARE_VERSION);
+         }
+         //Use the version that you have incrementally built while being local at the coordinator site (potentially, here)
+         final GMUVersion transactionVersion =  (GMUVersion) command.getReadVersion();
+         //ReadSet validation according to my (hopefully right) interpretation of the pseudo-code
+         ((ClusteringDependentLogic.DistributionLogic) cdl).performReadSetValidationPC(ctx, command, transactionVersion, dataContainer);
+
          if (hasToUpdateLocalKeys) {
 
             if (stats)

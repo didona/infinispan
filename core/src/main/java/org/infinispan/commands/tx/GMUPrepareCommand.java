@@ -32,7 +32,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * @author Pedro Ruivo 
+ * @author Pedro Ruivo
  * @since 5.2
  */
 public class GMUPrepareCommand extends PrepareCommand {
@@ -44,6 +44,9 @@ public class GMUPrepareCommand extends PrepareCommand {
    private Object[] readSet;
    private EntryVersion version;
    private BitSet alreadyReadFrom;
+
+   //DIE
+   private EntryVersion readVersion; //This is the version that the local xact has after having completed the local exec and before issuing the commit request
 
    public GMUPrepareCommand(String cacheName, GlobalTransaction gtx, boolean onePhaseCommit, WriteCommand... modifications) {
       super(cacheName, gtx, onePhaseCommit, modifications);
@@ -71,16 +74,23 @@ public class GMUPrepareCommand extends PrepareCommand {
       return true; //we need the version from the other guys...
    }
 
+   //DIE
+   public void setReadVersion(EntryVersion readVersion) {
+      this.readVersion = readVersion;
+   }
+
    @Override
    public Object[] getParameters() {
       int numMods = modifications == null ? 0 : modifications.length;
       int numReads = readSet == null ? 0 : readSet.length;
       int i = 0;
-      final int params = 6;
+      final int params = 7;
       Object[] retVal = new Object[numMods + numReads + params];
       retVal[i++] = globalTx;
       retVal[i++] = onePhaseCommit;
       retVal[i++] = version;
+      //DIE
+      retVal[i++] = readVersion;
       retVal[i++] = alreadyReadFrom;
       retVal[i++] = numMods;
       retVal[i++] = numReads;
@@ -100,6 +110,8 @@ public class GMUPrepareCommand extends PrepareCommand {
       globalTx = (GlobalTransaction) args[i++];
       onePhaseCommit = (Boolean) args[i++];
       version = (EntryVersion) args[i++];
+      //DIE
+      readVersion = (EntryVersion) args[i++];
       alreadyReadFrom = (BitSet) args[i++];
       int numMods = (Integer) args[i++];
       int numReads = (Integer) args[i++];
@@ -107,7 +119,7 @@ public class GMUPrepareCommand extends PrepareCommand {
          modifications = new WriteCommand[numMods];
          System.arraycopy(args, i, modifications, 0, numMods);
       }
-      if(numReads > 0){
+      if (numReads > 0) {
          readSet = new Object[numReads];
          System.arraycopy(args, i + numMods, readSet, 0, numReads);
       }
@@ -121,6 +133,8 @@ public class GMUPrepareCommand extends PrepareCommand {
       copy.onePhaseCommit = onePhaseCommit;
       copy.readSet = readSet == null ? null : readSet.clone();
       copy.version = version;
+      //DIE
+      copy.readVersion = readVersion;
       copy.alreadyReadFrom = (BitSet) alreadyReadFrom.clone();
       return copy;
    }
@@ -129,6 +143,7 @@ public class GMUPrepareCommand extends PrepareCommand {
    public String toString() {
       return "GMUPrepareCommand {" +
             "version=" + version +
+            "readVersion=" + readVersion +
             ", onePhaseCommit=" + onePhaseCommit +
             ", gtx=" + globalTx +
             ", cacheName='" + cacheName + '\'' +
@@ -151,6 +166,10 @@ public class GMUPrepareCommand extends PrepareCommand {
 
    public EntryVersion getPrepareVersion() {
       return version;
+   }
+
+   public EntryVersion getReadVersion() {
+      return readVersion;
    }
 
    public BitSet getAlreadyReadFrom() {

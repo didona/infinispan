@@ -409,7 +409,9 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
          });
 
          return;
-      } else if (cmd instanceof AbstractTransactionBoundaryCommand){
+      }
+      //This is the case of Prepare/RollbackCommand also for GMU; or CommitCommand for non-GMU (GMUCommit is handled before)
+      else if (cmd instanceof AbstractTransactionBoundaryCommand){
 
          final StateTransferLock stateTransferLock = cr.getStateTransferLock();
          final int commandTopologyId = extractCommandTopologyId(cmd);
