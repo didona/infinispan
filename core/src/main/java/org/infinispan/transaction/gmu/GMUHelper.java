@@ -104,9 +104,16 @@ public class GMUHelper {
          return;
       }
       boolean valid;
+      //Remote reads are served by primary owners, so if the command is remote, the node only validates keys
+      //For which it is PO. If it is local, the node validates all the keys that are local to it
+      //dunno how this relates to NBST
+      final boolean local = ctx.isOriginLocal();
+      boolean validateKey;
       for (Object key : prepareCommand.getReadSet()) {
+         validateKey = local ? keyLogic.localNodeIsOwner(key) : keyLogic.localNodeIsOwner(key);
          //if (keyLogic.localNodeIsOwner(key)) {
-         if (keyLogic.localNodeIsPrimaryOwner(key)) {      //DIE: for now, hardcoded
+         //if (keyLogic.localNodeIsPrimaryOwner(key)) {      //DIE: for now, hardcoded
+         if (validateKey) {
             //Giving null as version, in the end you should have the last committed value
             valid = validate(xactVersion, key, dataContainer, gtx);
             if (!valid) {

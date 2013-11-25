@@ -110,6 +110,8 @@ public class GMUEntryWrappingInterceptor extends EntryWrappingInterceptor {
    private CacheStore store;
    private CommitLog commitLog;
 
+   private final boolean earliestAbortCheck = false;
+
 
    @Inject
    public void inject(TransactionCommitManager transactionCommitManager,
@@ -158,7 +160,7 @@ public class GMUEntryWrappingInterceptor extends EntryWrappingInterceptor {
             if (validationPC)
                spc.setReadVersion(transactionVersion);
          } else {
-            if(!validationPC)
+            if (!validationPC)
                ctx.setTransactionVersion(spc.getPrepareVersion());
             else
                ctx.setTransactionVersion(spc.getReadVersion());
@@ -467,7 +469,7 @@ public class GMUEntryWrappingInterceptor extends EntryWrappingInterceptor {
             stat.incrementValue(NUM_UPDATE_PREPARE_VERSION);
          }
          //Use the version that you have incrementally built while being local at the coordinator site (potentially, here)
-         final GMUVersion transactionVersion =  (GMUVersion) command.getReadVersion();
+         final GMUVersion transactionVersion = (GMUVersion) command.getReadVersion();
          //ReadSet validation according to my (hopefully right) interpretation of the pseudo-code
          ((ClusteringDependentLogic.DistributionLogic) cdl).performReadSetValidationPC(ctx, command, transactionVersion, dataContainer);
 
@@ -618,9 +620,16 @@ public class GMUEntryWrappingInterceptor extends EntryWrappingInterceptor {
                     txInvocationContext.getKeysReadInCommand());
       }
       //TODO DIEGO:  is this check on all the reads necessary to be done always?
-
       //TODO: here I check if an update xact has read something old at runtime. If I pre-mark update xacts, I should act here.
+      boolean isMostRecent;
       for (InternalGMUCacheEntry internalGMUCacheEntry : txInvocationContext.getKeysReadInCommand().values()) {
+         isMostRecent = internalGMUCacheEntry.isMostRecent();
+         /*
+         if (!isMostRecent) {
+            rememberStaleReadIfNeeded(txInvocationContext);
+         }
+         */
+         //if (isLocalUpdateXact(txInvocationContext) && !isMostRecent && !internalGMUCacheEntry.isUnsafeToRead()) {
          if (txInvocationContext.hasModifications() && !internalGMUCacheEntry.isMostRecent() && !internalGMUCacheEntry.isUnsafeToRead()) {
             throw new CacheException("Read-Write transaction read an old value and should rollback");
          }
@@ -644,6 +653,31 @@ public class GMUEntryWrappingInterceptor extends EntryWrappingInterceptor {
       if (entryVersionList.size() > 1) {
          EntryVersion[] txVersionArray = new EntryVersion[entryVersionList.size()];
          txInvocationContext.setTransactionVersion(versionGenerator.mergeAndMax(entryVersionList.toArray(txVersionArray)));
+      }
+   }
+
+   //DIE
+   //A xact is update if it has either been declared so, or if it has already written something
+   private boolean isLocalUpdateXact(TxInvocationContext tctx) {
+      if (tctx instanceof LocalTxInvocationContext) {
+         LocalTxInvocationContext ltctc = (LocalTxInvocationContext) tctx;
+         return ltctc.isMarkedAsUpdate() || ltctc.hasModifications();
+      } else return false;
+   }
+
+   //DIE
+   //The case in which the xact has already been tagged by the programmer as update is already covered
+   //Here we want to abort local xact which are being promoted to update but has read stale data when they were still runtime-validated as readonly
+   private boolean checkEarliestAbortUponWrite(InvocationContext tctx) {
+      if (tctx instanceof LocalTxInvocationContext) {
+         LocalTxInvocationContext ltctc = (LocalTxInvocationContext) tctx;
+         return ltctc.isMarkedAsUpdate()|| !ltctc.hasModifications();
+      } else return false;
+   }
+
+   private void rememberStaleReadIfNeeded(TxInvocationContext tctx) {
+      if (tctx instanceof LocalTxInvocationContext) {
+         ((LocalTxInvocationContext) tctx).setHasReadStaleVersion(true);
       }
    }
 

@@ -58,6 +58,10 @@ public abstract class AbstractInvocationContext implements InvocationContext {
    
    private boolean alreadyReadOnThisNode;
 
+   //DIE
+   private boolean isMarkedAsUpdate = false;
+   private boolean hasReadStaleVersion = false;
+
    // if this or any context subclass ever needs to store a boolean, always use a context flag instead.  This is far
    // more space-efficient.  Note that this value will be stored in a byte, which means up to 8 flags can be stored in
    // a single byte.  Always start shifting with 0, the last shift cannot be greater than 7.
@@ -157,6 +161,22 @@ public abstract class AbstractInvocationContext implements InvocationContext {
    @Override
    public void setClassLoader(ClassLoader classLoader) {
       this.classLoader = classLoader;
+   }
+
+   public boolean isMarkedAsUpdate() {
+      return isMarkedAsUpdate;
+   }
+
+   public void setMarkedAsUpdate(boolean markedAsUpdate) {
+      isMarkedAsUpdate = markedAsUpdate;
+   }
+
+   public boolean isHasReadStaleVersion() {
+      return hasReadStaleVersion;
+   }
+
+   public void setHasReadStaleVersion(boolean hasReadStaleVersion) {
+      this.hasReadStaleVersion = hasReadStaleVersion;
    }
 
    @Override
