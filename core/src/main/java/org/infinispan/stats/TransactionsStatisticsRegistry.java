@@ -281,6 +281,10 @@ public final class TransactionsStatisticsRegistry {
       }
    }
 
+   public static void dumpHistograms() {
+      transactionalClassesStatsMap.get(DEFAULT_ISPN_CLASS).dumpHistograms();
+   }
+
    public static void setTransactionalClass(String className, TransactionStatistics transactionStatistics) {
       if (!active) {
          return;

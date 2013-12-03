@@ -40,15 +40,19 @@ public class StatHistogramContainer {
 
 
    private void addLocalSample(LocalTransactionStatistics lt) {
-      rttHistogram.insertSample(lt.getValue(ExposedStatistic.RTT_PREPARE));
+      rttHistogram.insertSample(nanoToMicro(lt.getValue(ExposedStatistic.RTT_PREPARE)));
    }
 
    private void addRemoteSample(RemoteTransactionStatistics rt) {
-      remoteAckToCommitHistogram.insertSample(rt.getValue(ExposedStatistic.REMOTE_TIME_BETWEEN_ACK_AND_COMMIT));
+      remoteAckToCommitHistogram.insertSample(nanoToMicro((rt.getValue(ExposedStatistic.REMOTE_TIME_BETWEEN_ACK_AND_COMMIT))));
    }
 
    public void dump() {
       rttHistogram.dumpHistogram();
       remoteAckToCommitHistogram.dumpHistogram();
+   }
+
+   private double nanoToMicro(double d) {
+      return d * 1e-3;
    }
 }

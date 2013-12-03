@@ -736,6 +736,12 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
       TransactionsStatisticsRegistry.reset();
    }
 
+   @ManagedOperation(description = "Dump histograms",
+                     displayName = "Dump histograms")
+   public void dumpHistograms() {
+      TransactionsStatisticsRegistry.dumpHistograms();
+   }
+
    @ManagedAttribute(description = "Average Local processing Get time (in microseconds)",
                      displayName = "Avg Local Get time")
    public long getAvgLocalGetTime() {

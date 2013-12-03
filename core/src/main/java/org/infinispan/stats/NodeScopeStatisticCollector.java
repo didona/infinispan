@@ -52,12 +52,10 @@ public class NodeScopeStatisticCollector {
    private final static boolean COLLECT_PERCENTILES = false;  //Percentiels are collected in a synchronized block; I don't want them as I am not using them
    private final static boolean HISTO = true;
 
-   private final StatHistogramContainer statHistogramContainer;
+   private StatHistogramContainer statHistogramContainer;
 
    public NodeScopeStatisticCollector() {
       globalContainer = new ConcurrentGlobalContainer();
-      if (HISTO)
-         statHistogramContainer = new StatHistogramContainer();
       reset();
    }
 
@@ -83,6 +81,13 @@ public class NodeScopeStatisticCollector {
       this.localTransactionWrExecutionTime = PercentileStatsFactory.createNewPercentileStats();
       this.remoteTransactionRoExecutionTime = PercentileStatsFactory.createNewPercentileStats();
       this.remoteTransactionWrExecutionTime = PercentileStatsFactory.createNewPercentileStats();
+      if (HISTO)
+         statHistogramContainer = new StatHistogramContainer();
+   }
+
+   public void dumpHistograms() {
+      if (HISTO)
+         statHistogramContainer.dump();
    }
 
    public final void merge(TransactionStatistics ts) {

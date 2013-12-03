@@ -75,6 +75,7 @@ public class Histogram {
    }
 
    public void initBuckets() {
+      this.numBuckets = (int) (max - min) / step;
       this.buckets = new AtomicInteger[numBuckets];
       for (int i = 0; i < numBuckets; i++) {
          this.buckets[i] = new AtomicInteger(0);
