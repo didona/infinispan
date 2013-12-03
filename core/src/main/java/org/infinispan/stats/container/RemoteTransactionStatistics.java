@@ -42,9 +42,18 @@ public class RemoteTransactionStatistics extends TransactionStatistics {
 
    private static final Log log = LogFactory.getLog(RemoteTransactionStatistics.class);
    private static final int SIZE = getRemoteStatsSize();
+   private long sendAckTime = 0L;
 
    public RemoteTransactionStatistics(Configuration configuration) {
       super(SIZE, configuration);
+   }
+
+   public long getSendAckTime() {
+      return sendAckTime;
+   }
+
+   public void startAckTimer() {
+      this.sendAckTime =  System.nanoTime();
    }
 
    @Override

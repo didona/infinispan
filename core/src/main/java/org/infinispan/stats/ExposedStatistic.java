@@ -134,6 +134,7 @@ public enum ExposedStatistic {
    RTT_GET(true, false),            // L
    RTT_GET_NO_WAIT(true, false),
    NUM_RTT_GET_NO_WAIT(true, false),
+   REMOTE_TIME_BETWEEN_ACK_AND_COMMIT(false,true),
 
    //SEND STUFF: everything is local && asynchronous communication .
    //NUM refers to the number of nodes INVOLVED in the distributed synchronization phases

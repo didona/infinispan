@@ -22,6 +22,7 @@
  */
 package org.infinispan.stats;
 
+import org.infinispan.distribution.wrappers.StatHistogramContainer;
 import org.infinispan.stats.container.ConcurrentGlobalContainer;
 import org.infinispan.stats.container.StatisticsSnapshot;
 import org.infinispan.stats.container.TransactionStatistics;
@@ -48,8 +49,15 @@ public class NodeScopeStatisticCollector {
    private volatile PercentileStats localTransactionRoExecutionTime;
    private volatile PercentileStats remoteTransactionRoExecutionTime;
 
+   private final static boolean COLLECT_PERCENTILES = false;  //Percentiels are collected in a synchronized block; I don't want them as I am not using them
+   private final static boolean HISTO = true;
+
+   private final StatHistogramContainer statHistogramContainer;
+
    public NodeScopeStatisticCollector() {
       globalContainer = new ConcurrentGlobalContainer();
+      if (HISTO)
+         statHistogramContainer = new StatHistogramContainer();
       reset();
    }
 
@@ -82,6 +90,11 @@ public class NodeScopeStatisticCollector {
          log.tracef("Merge transaction statistics %s to the node statistics", ts);
       }
       ts.flush(globalContainer);
+      if (!COLLECT_PERCENTILES)
+         return;
+      if (HISTO) {
+         statHistogramContainer.addSample(ts);
+      }
       if (ts.isLocal()) {
          if (ts.isCommit()) {
             if (ts.isReadOnly()) {
@@ -402,9 +415,9 @@ public class NodeScopeStatisticCollector {
          }
          case TX_WRITE_PERCENTAGE: {     //computed on the locally born txs
             long readTx = snapshot.getLocal(NUM_READ_ONLY_TX_COMMIT) +
-                    snapshot.getLocal(NUM_ABORTED_RO_TX);
+                  snapshot.getLocal(NUM_ABORTED_RO_TX);
             long writeTx = snapshot.getLocal(NUM_COMMITTED_WR_TX) +
-                    snapshot.getLocal(NUM_ABORTED_WR_TX);
+                  snapshot.getLocal(NUM_ABORTED_WR_TX);
             long total = readTx + writeTx;
             if (total != 0)
                return new Double(writeTx * 1.0 / total);
@@ -487,9 +500,9 @@ public class NodeScopeStatisticCollector {
          }
          case ABORT_RATE:
             long totalAbort = snapshot.getLocal(NUM_ABORTED_RO_TX) +
-                    snapshot.getLocal(NUM_ABORTED_WR_TX);
+                  snapshot.getLocal(NUM_ABORTED_WR_TX);
             long totalCommitAndAbort = snapshot.getLocal(NUM_READ_ONLY_TX_COMMIT) +
-                    snapshot.getLocal(NUM_COMMITTED_WR_TX) + totalAbort;
+                  snapshot.getLocal(NUM_COMMITTED_WR_TX) + totalAbort;
             if (totalCommitAndAbort != 0) {
                return new Double(totalAbort * 1.0 / totalCommitAndAbort);
             }
@@ -499,18 +512,18 @@ public class NodeScopeStatisticCollector {
          }
          case ARRIVAL_RATE:
             long localCommittedTx = snapshot.getLocal(NUM_READ_ONLY_TX_COMMIT) +
-                    snapshot.getLocal(NUM_COMMITTED_WR_TX);
+                  snapshot.getLocal(NUM_COMMITTED_WR_TX);
             long localAbortedTx = snapshot.getLocal(NUM_ABORTED_RO_TX) +
-                    snapshot.getLocal(NUM_ABORTED_WR_TX);
+                  snapshot.getLocal(NUM_ABORTED_WR_TX);
             long remoteCommittedTx = snapshot.getRemote(NUM_READ_ONLY_TX_COMMIT) +
-                    snapshot.getRemote(NUM_COMMITTED_WR_TX);
+                  snapshot.getRemote(NUM_COMMITTED_WR_TX);
             long remoteAbortedTx = snapshot.getRemote(NUM_ABORTED_RO_TX) +
-                    snapshot.getRemote(NUM_ABORTED_WR_TX);
+                  snapshot.getRemote(NUM_ABORTED_WR_TX);
             long totalBornTx = localAbortedTx + localCommittedTx + remoteAbortedTx + remoteCommittedTx;
             return new Double(totalBornTx * 1.0 / convertNanosToSeconds(System.nanoTime() - snapshot.getLastResetTime()));
          case THROUGHPUT:
             long totalLocalBornTx = snapshot.getLocal(NUM_READ_ONLY_TX_COMMIT) +
-                    snapshot.getLocal(NUM_COMMITTED_WR_TX);
+                  snapshot.getLocal(NUM_COMMITTED_WR_TX);
             return new Double(totalLocalBornTx * 1.0 / convertNanosToSeconds(System.nanoTime() - snapshot.getLastResetTime()));
          case LOCK_HOLD_TIME_LOCAL:
             return microAvgLocal(snapshot, NUM_HELD_LOCKS, LOCK_HOLD_TIME);
@@ -518,17 +531,17 @@ public class NodeScopeStatisticCollector {
             return microAvgRemote(snapshot, NUM_HELD_LOCKS, LOCK_HOLD_TIME);
          case NUM_COMMITS:
             return new Long(snapshot.getLocal(NUM_READ_ONLY_TX_COMMIT) +
-                    snapshot.getLocal(NUM_COMMITTED_WR_TX) +
-                    snapshot.getRemote(NUM_READ_ONLY_TX_COMMIT) +
-                    snapshot.getRemote(NUM_COMMITTED_WR_TX));
+                                  snapshot.getLocal(NUM_COMMITTED_WR_TX) +
+                                  snapshot.getRemote(NUM_READ_ONLY_TX_COMMIT) +
+                                  snapshot.getRemote(NUM_COMMITTED_WR_TX));
          case NUM_LOCAL_COMMITS:
             return new Long(snapshot.getLocal(NUM_READ_ONLY_TX_COMMIT) +
-                    snapshot.getLocal(NUM_COMMITTED_WR_TX));
+                                  snapshot.getLocal(NUM_COMMITTED_WR_TX));
          case WRITE_SKEW_PROBABILITY:
             long totalTxs = snapshot.getLocal(NUM_READ_ONLY_TX_COMMIT) +
-                    snapshot.getLocal(NUM_COMMITTED_WR_TX) +
-                    snapshot.getLocal(NUM_ABORTED_RO_TX) +
-                    snapshot.getLocal(NUM_ABORTED_WR_TX);
+                  snapshot.getLocal(NUM_COMMITTED_WR_TX) +
+                  snapshot.getLocal(NUM_ABORTED_RO_TX) +
+                  snapshot.getLocal(NUM_ABORTED_WR_TX);
             if (totalTxs != 0) {
                long writeSkew = snapshot.getLocal(NUM_WRITE_SKEW);
                return new Double(writeSkew * 1.0 / totalTxs);
@@ -536,10 +549,10 @@ public class NodeScopeStatisticCollector {
             return new Double(0);
          case NUM_GET:
             return snapshot.getLocal(NUM_SUCCESSFUL_GETS_WR_TX) +
-                    snapshot.getLocal(NUM_SUCCESSFUL_GETS_RO_TX);
+                  snapshot.getLocal(NUM_SUCCESSFUL_GETS_RO_TX);
          case NUM_LOCAL_REMOTE_GET:
             return snapshot.getLocal(NUM_SUCCESSFUL_REMOTE_GETS_WR_TX) +
-                    snapshot.getLocal(NUM_SUCCESSFUL_REMOTE_GETS_RO_TX);
+                  snapshot.getLocal(NUM_SUCCESSFUL_REMOTE_GETS_RO_TX);
          case NUM_PUT:
             return snapshot.getLocal(NUM_SUCCESSFUL_PUTS_WR_TX);
          case NUM_REMOTE_PUT:
@@ -550,7 +563,7 @@ public class NodeScopeStatisticCollector {
                return new Long(0L);
             } else {
                long local_get_time = snapshot.getLocal(ALL_GET_EXECUTION) -
-                       snapshot.getLocal(LOCAL_REMOTE_GET_R);
+                     snapshot.getLocal(LOCAL_REMOTE_GET_R);
 
                return new Long(convertNanosToMicro(local_get_time) / num);
             }
@@ -574,6 +587,9 @@ public class NodeScopeStatisticCollector {
          }
          case SENT_ASYNC_COMMIT: {
             return avgLocal(snapshot, NUM_ASYNC_COMMIT, SENT_ASYNC_COMMIT);
+         }
+         case REMOTE_TIME_BETWEEN_ACK_AND_COMMIT: {
+            return avgRemote(snapshot, REMOTE_TIME_BETWEEN_ACK_AND_COMMIT, NUM_UPDATE_TX_REMOTE_COMMIT);
          }
          case TERMINATION_COST: {
             return avgMultipleLocalCounters(snapshot, TERMINATION_COST, NUM_ABORTED_WR_TX, NUM_ABORTED_RO_TX, NUM_COMMITTED_RO_TX, NUM_COMMITTED_WR_TX);

@@ -211,7 +211,7 @@ public class GMUEntryWrappingInterceptor extends EntryWrappingInterceptor {
          retVal = invokeNextIgnoringTimeout(ctx, command);
          //in remote context, the commit command will be enqueue, so it does not need to wait
 
-         if (transactionEntry != null) {
+         if (transactionEntry != null) {  //This can be only in the local case (see before), so IIHI increments wait for remote, and here only local
             final TransactionStatistics transactionStatistics = TransactionsStatisticsRegistry.getTransactionStatistics();
             boolean waited = transactionStatistics != null && !transactionEntry.isReadyToCommit();
             long waitTime = 0L;
