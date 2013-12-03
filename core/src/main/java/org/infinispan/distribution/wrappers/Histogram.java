@@ -22,14 +22,15 @@
  */
 package org.infinispan.distribution.wrappers;
 
+import org.jgroups.logging.Log;
+import org.jgroups.logging.LogFactory;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Massive hack for a noble cause!
- *
  * @author Diego Didona <didona@gsd.inesc-id.pt>
  * @since 5.2
  */
@@ -44,6 +45,8 @@ public class Histogram {
    private int numBuckets;
 
    private String fileName;
+
+   private final static Log log = LogFactory.getLog(Histogram.class);
 
    public Histogram(long min, long max, int step) {
       this.step = step;
@@ -80,6 +83,7 @@ public class Histogram {
       for (int i = 0; i < numBuckets; i++) {
          this.buckets[i] = new AtomicInteger(0);
       }
+      log.trace(this);
    }
 
    public int getStep() {
@@ -152,4 +156,14 @@ public class Histogram {
       }
    }
 
+   @Override
+   public String toString() {
+      return "Histogram{" +
+            "step=" + step +
+            ", min=" + min +
+            ", max=" + max +
+            ", numBuckets=" + numBuckets +
+            ", fileName='" + fileName + '\'' +
+            '}';
+   }
 }

@@ -95,10 +95,11 @@ public class NodeScopeStatisticCollector {
          log.tracef("Merge transaction statistics %s to the node statistics", ts);
       }
       ts.flush(globalContainer);
-      if (!COLLECT_PERCENTILES)
-         return;
+
       if (HISTO) {
          statHistogramContainer.addSample(ts);
+         if (!COLLECT_PERCENTILES)
+            return;
       }
       if (ts.isLocal()) {
          if (ts.isCommit()) {
