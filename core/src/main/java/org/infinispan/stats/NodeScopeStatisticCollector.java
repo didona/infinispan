@@ -595,7 +595,7 @@ public class NodeScopeStatisticCollector {
             return avgLocal(snapshot, NUM_ASYNC_COMMIT, SENT_ASYNC_COMMIT);
          }
          case REMOTE_TIME_BETWEEN_ACK_AND_COMMIT: {
-            return avgRemote(snapshot, REMOTE_TIME_BETWEEN_ACK_AND_COMMIT, NUM_UPDATE_TX_REMOTE_COMMIT);
+            return avgRemote(snapshot, NUM_UPDATE_TX_REMOTE_COMMIT,REMOTE_TIME_BETWEEN_ACK_AND_COMMIT);
          }
          case TERMINATION_COST: {
             return avgMultipleLocalCounters(snapshot, TERMINATION_COST, NUM_ABORTED_WR_TX, NUM_ABORTED_RO_TX, NUM_COMMITTED_RO_TX, NUM_COMMITTED_WR_TX);
