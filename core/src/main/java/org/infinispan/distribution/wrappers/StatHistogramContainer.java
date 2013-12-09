@@ -56,6 +56,7 @@ public class StatHistogramContainer {
    public void dump() {
       rttHistogram.dumpHistogram();
       remoteAckToCommitHistogram.dumpHistogram();
+      localCommitWaitTimeHistogram.dumpHistogram();
    }
 
    private double nanoToMicro(double d) {
