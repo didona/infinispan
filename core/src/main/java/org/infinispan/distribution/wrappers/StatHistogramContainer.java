@@ -12,10 +12,12 @@ import xml.DXmlParser;
  */
 public class StatHistogramContainer {
 
-   private final Histogram rttHistogram;
-   private final Histogram remoteAckToCommitHistogram;
    private final static String rtt = "conf/rtt_histo.xml";
    private final static String ack = "conf/ack_histo.xml";
+   private final static String lcq = "conf/lcq_histo.xml";
+   private final Histogram rttHistogram;
+   private final Histogram remoteAckToCommitHistogram;
+   private final Histogram localCommitWaitTimeHistogram;
 
    public StatHistogramContainer() {
       DXmlParser<Histogram> parser = new DXmlParser<Histogram>();
@@ -23,6 +25,8 @@ public class StatHistogramContainer {
       rttHistogram.initBuckets();
       remoteAckToCommitHistogram = parser.parse(ack);
       remoteAckToCommitHistogram.initBuckets();
+      localCommitWaitTimeHistogram = parser.parse(lcq);
+      localCommitWaitTimeHistogram.initBuckets();
    }
 
    public void addSample(TransactionStatistics t) {
@@ -38,9 +42,11 @@ public class StatHistogramContainer {
       }
    }
 
-
    private void addLocalSample(LocalTransactionStatistics lt) {
       rttHistogram.insertSample(nanoToMicro(lt.getValue(ExposedStatistic.RTT_PREPARE)));
+      long waitedTime = lt.getValue(ExposedStatistic.WAIT_TIME_IN_COMMIT_QUEUE);
+      if (waitedTime > 0)
+         localCommitWaitTimeHistogram.insertSample(nanoToMicro(waitedTime));
    }
 
    private void addRemoteSample(RemoteTransactionStatistics rt) {
