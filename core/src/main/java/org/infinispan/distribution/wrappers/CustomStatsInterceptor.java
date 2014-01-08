@@ -220,7 +220,7 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
       long currTime = System.nanoTime();
       transactionStatistics.addNTBCValue(currTime);
       transactionStatistics.attachId(ctx.getGlobalTransaction());
-      if (LockRelatedStatsHelper.shouldAppendLocks(configuration, true, !ctx.isOriginLocal(),ctx.getGlobalTransaction().globalId())) {
+      if (LockRelatedStatsHelper.shouldAppendLocks(configuration, true, !ctx.isOriginLocal(), ctx.getGlobalTransaction().globalId())) {
          if (log.isTraceEnabled())
             log.trace("DLOCKS : Appending locks for " + ((!ctx.isOriginLocal()) ? "remote " : "local ") + "transaction " +
                     ctx.getGlobalTransaction().globalId());
@@ -566,6 +566,12 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
            displayName = "Avg Read-Only Transaction Duration")
    public long getAvgReadOnlyTxDuration() {
       return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(RO_TX_SUCCESSFUL_EXECUTION_TIME, null));
+   }
+
+   @ManagedAttribute(description = "Num acquired locks",
+           displayName = "Num acquired locks")
+   public long getNumAcquiredLocks() {
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(NUM_HELD_LOCKS, null));
    }
 
    @ManagedAttribute(description = "Average successful write transaction duration (in microseconds)",

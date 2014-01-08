@@ -69,6 +69,9 @@ public class RemoteTransactionStatistics extends TransactionStatistics {
       return false;
    }
 
+   /*
+   In our cases, this should be never called (A remote xact always flush locks async-ly
+   */
    protected void immediateLockingTimeSampling(int heldLocks, boolean isCommit) {
       double cumulativeLockHoldTime = this.computeCumulativeLockHoldTime(heldLocks, System.nanoTime());
       this.addValue(ExposedStatistic.NUM_HELD_LOCKS, heldLocks);
