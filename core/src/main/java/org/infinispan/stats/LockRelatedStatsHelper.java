@@ -35,10 +35,11 @@ import org.infinispan.util.logging.LogFactory;
 public class LockRelatedStatsHelper {
 
    private static final Log log = LogFactory.getLog(LockRelatedStatsHelper.class);
+   private final static boolean trace = log.isTraceEnabled();
    private static boolean enabled = false;
 
    public static void enable() {
-      log.trace("Enabling the LockRelatedStatsHelper. Using GMU, then!");
+      log.trace("DLOCKS : Enabling the LockRelatedStatsHelper. Using GMU, then!");
       enabled = true;
    }
 
@@ -54,17 +55,20 @@ public class LockRelatedStatsHelper {
     * @return true if locks statistics cannot be sampled right away
     */
    //TODO: consider also recovery=true/false             -->now only considering recovery =  false
-   public static boolean shouldAppendLocks(Configuration conf, boolean isCommit, boolean isRemote) {
+   public static boolean shouldAppendLocks(Configuration conf, boolean isCommit, boolean isRemote, String id) {
       if (!enabled) {
-         if (log.isTraceEnabled())
+         if (trace)
             log.trace("LockRelatedHelper not enabled. Returning FALSE");
          return false;
       }
       boolean isGmu = conf.versioning().scheme().equals(VersioningScheme.GMU);
       boolean isSyncCommit = conf.transaction().syncCommitPhase();
-      if (log.isTraceEnabled())
-         log.trace("LockRelatedHelper enabled. " + (isGmu ? " GMU is on" : "RR") + (isSyncCommit ? " sync commit" : " async commit") + (isRemote ? "remote" : "local"));
-      return isRemote && isGmu && isCommit && !isSyncCommit;
+      boolean append = isRemote && isGmu && isCommit && !isSyncCommit;
+      if (trace) {
+         log.trace("DLOCKS : " + id  + (isCommit ? " COMMIT " : " ABORT ") + (isSyncCommit ? " sync commit" : " async commit") + (isRemote ? " remote " : " local"));
+         log.trace("DLOCKS : " + id + (append ? "" : "NOT ") + " going to append");
+      }
+      return append;
    }
 
    public static boolean maybePendingLocks(GlobalTransaction lockOwner) {

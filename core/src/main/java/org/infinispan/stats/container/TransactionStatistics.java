@@ -193,13 +193,13 @@ public abstract class TransactionStatistics implements InfinispanStat {
       int heldLocks = this.takenLocks.size();
       if (heldLocks > 0) {
          boolean remote = !(this instanceof LocalTransactionStatistics);
-         if (!LockRelatedStatsHelper.shouldAppendLocks(configuration, isCommit, remote)) {
+         if (!LockRelatedStatsHelper.shouldAppendLocks(configuration, isCommit, remote, id)) {
             if (getLog().isTraceEnabled())
-               getLog().trace("TID " + Thread.currentThread().getId() + "Sampling locks for " + (remote ? "remote " : "local ") + " transaction " + this.id + " commit? " + isCommit);
+               getLog().trace("DLOCKS : TID " + Thread.currentThread().getId() + " Sampling locks for " + (remote ? "remote " : "local ") + " transaction " + this.id + " commit? " + isCommit);
             immediateLockingTimeSampling(heldLocks, isCommit);
          } else {
             if (getLog().isTraceEnabled())
-               getLog().trace("NOT sampling locks for " + (remote ? "remote " : "local ") + " transaction " + this.id);
+               getLog().trace("DLOCKS : NOT sampling locks for " + (remote ? "remote " : "local ") + " transaction " + this.id);
          }
       }
 
@@ -271,12 +271,6 @@ public abstract class TransactionStatistics implements InfinispanStat {
    }
 
    public abstract boolean isLocal();
-
-   protected final void immediateLockingTimeSampling(int heldLocks) {
-      double cumulativeLockHoldTime = this.computeCumulativeLockHoldTime(heldLocks, System.nanoTime());
-      this.addValue(NUM_HELD_LOCKS, heldLocks);
-      this.addValue(LOCK_HOLD_TIME, cumulativeLockHoldTime);
-   }
 
    protected abstract int getIndex(ExposedStatistic param);
 

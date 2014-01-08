@@ -72,14 +72,23 @@ public class LockManagerWrapper implements LockManager {
 
    @Override
    public void unlock(Collection<Object> lockedKeys, Object lockOwner) {
-      flushPendingLocksIfNeeded((GlobalTransaction) lockOwner);
       if (log.isTraceEnabled()) log.tracef("LockManagerWrapper.unlock");
       actual.unlock(lockedKeys, lockOwner);
    }
 
    @Override
+   /*
+   THIS is the method invoked at commit/abort time to unlock keys
+    */
    public void unlockAll(InvocationContext ctx) {
-      if (log.isTraceEnabled()) log.tracef("LockManagerWrapper.unlockAll");
+      final boolean trace = log.isTraceEnabled();
+      //If we're not in tx class, do nothing
+      if (ctx.isInTxScope()) {
+         if (trace) {
+            log.tracef("LockManagerWrapper.unlockAll");
+         }
+         flushPendingLocksIfNeeded(((TxInvocationContext) ctx).getGlobalTransaction());
+      }
       actual.unlockAll(ctx);
    }
 
@@ -209,8 +218,26 @@ public class LockManagerWrapper implements LockManager {
    }
 
    private void flushPendingLocksIfNeeded(GlobalTransaction lockOwner) {
+      final boolean trace = log.isTraceEnabled();
+
+      if (trace) {
+         if (!sampleHoldTimes) {
+            log.trace("DLOCKS: not sampling for " + lockOwner.globalId() + " as sampleHT is not enabled");
+         }
+         if (!TransactionsStatisticsRegistry.isActive()) {
+            log.trace("DLOCKS: not sampling for " + lockOwner.globalId() + " as Stats are not enabled");
+         }
+         if (!LockRelatedStatsHelper.maybePendingLocks(lockOwner)) {
+            log.trace("DLOCKS: not sampling for " + lockOwner.globalId() + " as no locks may be pending");
+         }
+      }
+
       if (TransactionsStatisticsRegistry.isActive() && sampleHoldTimes &&
-            LockRelatedStatsHelper.maybePendingLocks(lockOwner))
+              LockRelatedStatsHelper.maybePendingLocks(lockOwner)) {
+         if (trace) {
+            log.trace("DLOCKS : Will I flush locks for " + lockOwner.globalId() + "?");
+         }
          TransactionsStatisticsRegistry.flushPendingRemoteLocksIfNeeded(lockOwner);
+      }
    }
 }

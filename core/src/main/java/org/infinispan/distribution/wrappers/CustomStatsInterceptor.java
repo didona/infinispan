@@ -220,15 +220,15 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
       long currTime = System.nanoTime();
       transactionStatistics.addNTBCValue(currTime);
       transactionStatistics.attachId(ctx.getGlobalTransaction());
-      if (LockRelatedStatsHelper.shouldAppendLocks(configuration, true, !ctx.isOriginLocal())) {
+      if (LockRelatedStatsHelper.shouldAppendLocks(configuration, true, !ctx.isOriginLocal(),ctx.getGlobalTransaction().globalId())) {
          if (log.isTraceEnabled())
-            log.trace("Appending locks for " + ((!ctx.isOriginLocal()) ? "remote " : "local ") + "transaction " +
-                    ctx.getGlobalTransaction().getId());
+            log.trace("DLOCKS : Appending locks for " + ((!ctx.isOriginLocal()) ? "remote " : "local ") + "transaction " +
+                    ctx.getGlobalTransaction().globalId());
          TransactionsStatisticsRegistry.appendLocks();
       } else {
          if (log.isTraceEnabled())
-            log.trace("Not appending locks for " + ((!ctx.isOriginLocal()) ? "remote " : "local ") + "transaction " +
-                    ctx.getGlobalTransaction().getId());
+            log.trace("DLOCKS : Not appending locks for " + ((!ctx.isOriginLocal()) ? "remote " : "local ") + "transaction " +
+                    ctx.getGlobalTransaction().globalId());
       }
       Object ret = invokeNextInterceptor(ctx, command);
 

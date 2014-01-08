@@ -535,6 +535,8 @@ public class NodeScopeStatisticCollector {
             return microAvgLocal(snapshot, NUM_HELD_LOCKS, LOCK_HOLD_TIME);
          case LOCK_HOLD_TIME_REMOTE:
             return microAvgRemote(snapshot, NUM_HELD_LOCKS, LOCK_HOLD_TIME);
+         case NUM_HELD_LOCKS:
+            return snapshot.getLocal(NUM_HELD_LOCKS) + snapshot.getRemote(NUM_HELD_LOCKS);
          case NUM_COMMITS:
             return new Long(snapshot.getLocal(NUM_READ_ONLY_TX_COMMIT) +
                     snapshot.getLocal(NUM_COMMITTED_WR_TX) +

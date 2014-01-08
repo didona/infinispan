@@ -35,7 +35,6 @@ import org.infinispan.util.logging.LogFactory;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -52,9 +51,9 @@ public final class TransactionsStatisticsRegistry {
    private static final Log log = LogFactory.getLog(TransactionsStatisticsRegistry.class);
    //Now it is unbounded, we can define a MAX_NO_CLASSES
    private static final ConcurrentMap<String, NodeScopeStatisticCollector> transactionalClassesStatsMap
-         = ConcurrentMapFactory.makeConcurrentMap();
+           = ConcurrentMapFactory.makeConcurrentMap();
    private static final ConcurrentMap<GlobalTransaction, RemoteTransactionStatistics> remoteTransactionStatistics =
-         ConcurrentMapFactory.makeConcurrentMap();
+           ConcurrentMapFactory.makeConcurrentMap();
    //Comment for reviewers: do we really need threadLocal? If I have the global id of the transaction, I can
    //retrieve the transactionStatistics
    private static final ThreadLocal<TransactionStatistics> thread = new ThreadLocal<TransactionStatistics>();
@@ -101,7 +100,7 @@ public final class TransactionsStatisticsRegistry {
       TransactionStatistics stats = thread.get();
       if (stats == null) {
          log.debug("Trying to append locks " +
-                         " but no transaction is associated to the thread");
+                 " but no transaction is associated to the thread");
          return;
       }
       appendLocks(stats.getTakenLocks(), stats.getId());
@@ -121,7 +120,7 @@ public final class TransactionsStatisticsRegistry {
       }
       if (log.isDebugEnabled()) {
          log.debugf("Flushing value %s to parameter %s without attached xact",
-                    value, param);
+                 value, param);
       }
       NodeScopeStatisticCollector nssc = transactionalClassesStatsMap.get(DEFAULT_ISPN_CLASS);
       if (local) {
@@ -182,7 +181,7 @@ public final class TransactionsStatisticsRegistry {
       }
       if (log.isTraceEnabled()) {
          log.tracef("Attribute %s (%s) == %s", param, transactionClass == null ? DEFAULT_ISPN_CLASS : transactionClass,
-                    ret);
+                 ret);
       }
       return ret;
    }
@@ -205,12 +204,43 @@ public final class TransactionsStatisticsRegistry {
       if (!active) {
          return;
       }
+      final boolean trace = log.isTraceEnabled();
+
+      if (trace) {
+         log.trace("DLOCKS : Should I flush locks for " + (id.isRemote() ? "remote " : "local ") + "xact " + id.globalId() + "?");
+         dumpLocksPRE();
+      }
       if (pendingLocks.containsKey(id.globalId())) {
-         if (log.isTraceEnabled())
-            log.trace("Going to flush locks for " + (id.isRemote() ? "local " : "remote ") + "xact " + id.getId());
+         if (trace) {
+            log.trace("DLOCKS : YES: Going to flush locks for " + (id.isRemote() ? "remote " : "local ") + "xact " + id.globalId());
+            dumpLocksPRE();
+         }
          immediateRemoteLockingTimeSampling(pendingLocks.get(id.globalId()));
          pendingLocks.remove(id.globalId());
+         if (trace)
+            dumpLocksPOST();
+      } else {
+         if (trace)
+            log.trace("DLOCKS: NO");
       }
+   }
+
+   private static void dumpLocksPRE() {
+
+      if (pendingLocks.keySet().size() == 0) {
+         log.trace("DLOCKS : PRE==>EMPTY");
+         return;
+      }
+
+      for (String s : pendingLocks.keySet()) {
+         log.trace("DLOCKS: " + s + "," + pendingLocks.get(s).size());
+      }
+   }
+
+   private static void dumpLocksPOST() {
+      log.trace("DLOCKS : POST");
+      for (String s : pendingLocks.keySet())
+         log.trace("DLOCKS: " + s + "," + pendingLocks.get(s).size());
    }
 
    //This is synchronized because depending on the local/remote nature, a different object is created
@@ -308,16 +338,21 @@ public final class TransactionsStatisticsRegistry {
 
    private static void appendLocks(Map<Object, Long> locks, String id) {
       if (locks != null && !locks.isEmpty()) {
-         //log.trace("Appending locks for " + id);
+         final boolean trace = log.isTraceEnabled();
+         if (trace) {
+            log.trace("DLOCKS : Appending locks for " + id);
+            dumpLocksPRE();
+         }
          pendingLocks.put(id, locks);
+         if (trace)
+            dumpLocksPOST();
       }
    }
 
    private static long computeCumulativeLockHoldTime(Map<Object, Long> takenLocks, int numLocks, long currentTime) {
       long ret = numLocks * currentTime;
-      Set<Map.Entry<Object, Long>> keySet = takenLocks.entrySet();
-      for (Map.Entry<Object, Long> e : keySet)
-         ret -= takenLocks.get(e.getValue());
+      for (Object o : takenLocks.keySet())
+         ret -= takenLocks.get(o);
       return ret;
    }
 
@@ -325,6 +360,11 @@ public final class TransactionsStatisticsRegistry {
     * NB: I assume here that *only* remote transactions can have pending locks
     */
    private static void immediateRemoteLockingTimeSampling(Map<Object, Long> locks) {
+      if (locks == null) {
+         if (log.isTraceEnabled())
+            log.trace("DLOCKS : null locks");
+         return;
+      }
       int size = locks.size();
       double cumulativeLockHoldTime = computeCumulativeLockHoldTime(locks, size, System.nanoTime());
       addValueAndFlushIfNeeded(ExposedStatistic.LOCK_HOLD_TIME, cumulativeLockHoldTime, false);
