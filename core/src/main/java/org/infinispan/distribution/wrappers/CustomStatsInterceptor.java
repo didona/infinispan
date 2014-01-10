@@ -262,6 +262,7 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
 
 
       boolean success = false;
+      Exception excp = null;
       try {
          long currTime = System.nanoTime();
          long currCpuTime = TransactionsStatisticsRegistry.getThreadCPUTime();
@@ -269,27 +270,33 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
          success = true;
          handlePrepareCommand(transactionStatistics, currTime, currCpuTime, ctx, command);
          return ret;
+         //This series of catches is to capture the exception thrown on the LOCAL node
       } catch (TimeoutException e) {
          //track ALL the timed out lock requests!
          transactionStatistics.incrementValue(NUM_TIMED_OUT_LOCKS);
+         log.fatal("TOE : Timeout for "+ctx.getGlobalTransaction().globalId());
          if (ctx.isOriginLocal()) {
             transactionStatistics.incrementValue(NUM_LOCK_FAILED_TIMEOUT);
          }
+         excp = e;
          throw e;
       } catch (DeadlockDetectedException e) {
          if (ctx.isOriginLocal()) {
             transactionStatistics.incrementValue(NUM_LOCK_FAILED_DEADLOCK);
          }
+         excp = e;
          throw e;
       } catch (WriteSkewException e) {
          if (ctx.isOriginLocal()) {
             transactionStatistics.incrementValue(NUM_WRITE_SKEW);
          }
+         excp = e;
          throw e;
       } catch (ValidationException e) {
          if (ctx.isOriginLocal()) {
             transactionStatistics.incrementValue(NUM_ABORTED_TX_DUE_TO_VALIDATION);
          }
+         excp = e;
          //Increment the killed xact only if the murder has happened on this node (whether the xact is local or remote)
          transactionStatistics.incrementValue(NUM_KILLED_TX_DUE_TO_VALIDATION);
          throw e;
@@ -297,8 +304,9 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
       }
       //We don't care about cacheException for earlyAbort
 
-      //Remote exception we care about
+      //This catch is for the exceptions thrown on other nodes!! (should work only for the coordinator, then)
       catch (Exception e) {
+         excp = e;
          if (ctx.isOriginLocal()) {
             if (e.getCause() instanceof TimeoutException) {
                transactionStatistics.incrementValue(NUM_LOCK_FAILED_TIMEOUT);
@@ -307,7 +315,6 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
 
             }
          }
-
          throw e;
       } finally {
          if (command.isOnePhaseCommit()) {
@@ -315,6 +322,9 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
             if (ctx.isOriginLocal()) {
                transactionStatistics.terminateTransaction();
             }
+         }
+         if ((excp != null)) {
+            log.fatal("TOE : xact " + ctx.getGlobalTransaction().globalId() + " dead for " + excp.getClass() + " and with cause " + excp.getCause());
          }
       }
    }
