@@ -219,7 +219,7 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
       long currCpuTime = TransactionsStatisticsRegistry.getThreadCPUTime();
       long currTime = System.nanoTime();
       transactionStatistics.addNTBCValue(currTime);
-      transactionStatistics.attachId(ctx.getGlobalTransaction());
+
       if (LockRelatedStatsHelper.shouldAppendLocks(configuration, true, !ctx.isOriginLocal(), ctx.getGlobalTransaction().globalId())) {
          if (log.isTraceEnabled())
             log.trace("DLOCKS : Appending locks for " + ((!ctx.isOriginLocal()) ? "remote " : "local ") + "transaction " +
@@ -244,6 +244,8 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
    }
 
    @Override
+   //TODO: I have to double check what is actually sampled for remote aborted xacts:
+   //TODO: do we sample for ack+nack xacts? For sure we do not sample for
    public Object visitPrepareCommand(TxInvocationContext ctx, PrepareCommand command) throws Throwable {
       if (log.isTraceEnabled()) {
          log.tracef("Visit Prepare command %s. Is it local?. Transaction is %s", command,
@@ -272,9 +274,12 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
          return ret;
          //This series of catches is to capture the exception thrown on the LOCAL node
       } catch (TimeoutException e) {
-         //track ALL the timed out lock requests!
+         /*
+          *  track ALL the timed out lock requests!  Consider that a remote transaction that fails
+          *  on this node WILL NOT be considered for statistics!!
+          */
          transactionStatistics.incrementValue(NUM_TIMED_OUT_LOCKS);
-         log.fatal("TOE : Timeout for "+ctx.getGlobalTransaction().globalId());
+         log.fatal("TOE : Timeout for " + ctx.getGlobalTransaction().globalId());
          if (ctx.isOriginLocal()) {
             transactionStatistics.incrementValue(NUM_LOCK_FAILED_TIMEOUT);
          }

@@ -146,9 +146,10 @@ public final class TransactionsStatisticsRegistry {
       if (!active) {
          return;
       }
+      final boolean debug = log.isDebugEnabled();
       TransactionStatistics txs = transactionStatistics == null ? thread.get() : transactionStatistics;
       if (txs == null) {
-         if (log.isDebugEnabled()) {
+         if (debug) {
             log.debug("Trying to invoke terminate() but no transaction is associated to the thread");
          }
          return;
@@ -215,7 +216,7 @@ public final class TransactionsStatisticsRegistry {
             log.trace("DLOCKS : YES: Going to flush locks for " + (id.isRemote() ? "remote " : "local ") + "xact " + id.globalId());
             dumpLocksPRE();
          }
-         immediateRemoteLockingTimeSampling(pendingLocks.get(id.globalId()));
+         deferredRemoteLockingTimeSampling(pendingLocks.get(id.globalId()));
          pendingLocks.remove(id.globalId());
          if (trace)
             dumpLocksPOST();
@@ -243,7 +244,7 @@ public final class TransactionsStatisticsRegistry {
          log.trace("DLOCKS: " + s + "," + pendingLocks.get(s).size());
    }
 
-   //This is synchronized because depending on the local/remote nature, a different object is created
+   //This *was* synchronized because depending on the local/remote nature, a different object is created
    //Now, remote transactionStatistics get initialized at InboundInvocationHandler level
    public static TransactionStatistics initTransactionIfNecessary(TxInvocationContext tctx) {
       if (!active) {
@@ -251,7 +252,8 @@ public final class TransactionsStatisticsRegistry {
       }
       boolean isLocal = tctx.isOriginLocal();
       if (isLocal) {
-         return initLocalTransaction();
+         TransactionStatistics t = initLocalTransaction();
+         t.attachId(tctx.getGlobalTransaction());
       }
       return thread.get();
    }
@@ -266,6 +268,7 @@ public final class TransactionsStatisticsRegistry {
             log.tracef("Create a new remote transaction statistic for transaction %s", globalTransaction.globalId());
          }
          rts = new RemoteTransactionStatistics(configuration);
+         rts.attachId(globalTransaction);
          remoteTransactionStatistics.put(globalTransaction, rts);
          final String transactionClass = globalTransaction.getTransactionClass();
          if (transactionClass != null) {
@@ -359,7 +362,7 @@ public final class TransactionsStatisticsRegistry {
    /**
     * NB: I assume here that *only* remote transactions can have pending locks
     */
-   private static void immediateRemoteLockingTimeSampling(Map<Object, Long> locks) {
+   private static void deferredRemoteLockingTimeSampling(Map<Object, Long> locks) {
       if (locks == null) {
          if (log.isTraceEnabled())
             log.trace("DLOCKS : null locks");
