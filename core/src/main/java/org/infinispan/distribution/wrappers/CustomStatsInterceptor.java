@@ -270,6 +270,8 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
          handlePrepareCommand(transactionStatistics, currTime, currCpuTime, ctx, command);
          return ret;
       } catch (TimeoutException e) {
+         //track ALL the timed out lock requests!
+         transactionStatistics.incrementValue(NUM_TIMED_OUT_LOCKS);
          if (ctx.isOriginLocal()) {
             transactionStatistics.incrementValue(NUM_LOCK_FAILED_TIMEOUT);
          }
@@ -2330,6 +2332,18 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
            displayName = "RemoteUpdateXactTimeBetweenAckAndCommit")
    public final long getRemoteUpdateXactTimeBetweenAckAndCommit() {
       return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(REMOTE_TIME_BETWEEN_ACK_AND_COMMIT, null));
+   }
+
+   @ManagedAttribute(description = "Timed out locks requests for local xacts",
+           displayName = "LocalTimedOutLocks")
+   public final long getLocalTimedOutLocks() {
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(NUM_TIMED_OUT_LOCKS, null));
+   }
+
+   @ManagedAttribute(description = "Timed out locks requests for remote xacts",
+           displayName = "RemoteTimedOutLocks")
+   public final long getRemoteTimedOutLocks() {
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(NUM_TIMED_OUT_LOCKS_R, null));
    }
 
    //NB: readOnly transactions are never aborted (RC, RR, GMU)

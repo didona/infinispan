@@ -122,6 +122,8 @@ public enum ExposedStatistic {
    NUM_LOCK_FAILED_TIMEOUT(true, false),  //L
    NUM_LOCK_FAILED_DEADLOCK(true, false), //L
    NUM_READLOCK_FAILED_TIMEOUT(true, false),
+   NUM_TIMED_OUT_LOCKS(true,true),
+   NUM_TIMED_OUT_LOCKS_R(false,true),//just for query
 
    //RTT STUFF: everything is local && synchronous communication
    NUM_RTTS_PREPARE(true, false),   // L

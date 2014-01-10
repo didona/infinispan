@@ -438,6 +438,7 @@ public class NodeScopeStatisticCollector {
             }
             return new Double(0);
          }
+         //TODO: not good
          case APPLICATION_CONTENTION_FACTOR: {
             long localTakenLocks = snapshot.getLocal(NUM_HELD_LOCKS);
             long remoteTakenLocks = snapshot.getRemote(NUM_HELD_LOCKS);
@@ -470,6 +471,10 @@ public class NodeScopeStatisticCollector {
          case NUM_LOCK_FAILED_TIMEOUT:
          case NUM_READLOCK_FAILED_TIMEOUT:
             return new Long(snapshot.getLocal(param));
+         case NUM_TIMED_OUT_LOCKS:
+            return snapshot.getLocal(NUM_TIMED_OUT_LOCKS);
+         case NUM_TIMED_OUT_LOCKS_R:
+            return snapshot.getRemote(NUM_TIMED_OUT_LOCKS_R);
          case WR_TX_SUCCESSFUL_EXECUTION_TIME:
             return microAvgLocal(snapshot, NUM_COMMITTED_WR_TX, WR_TX_SUCCESSFUL_EXECUTION_TIME);
          case WR_TX_ABORTED_EXECUTION_TIME:
