@@ -22,6 +22,9 @@
  */
 package org.infinispan.stats;
 
+import org.infinispan.util.logging.Log;
+import org.infinispan.util.logging.LogFactory;
+
 /**
  * Date: 28/12/11 Time: 15:38
  *
@@ -122,8 +125,8 @@ public enum ExposedStatistic {
    NUM_LOCK_FAILED_TIMEOUT(true, false),  //L
    NUM_LOCK_FAILED_DEADLOCK(true, false), //L
    NUM_READLOCK_FAILED_TIMEOUT(true, false),
-   NUM_TIMED_OUT_LOCKS(true,true),
-   NUM_TIMED_OUT_LOCKS_R(false,true),//just for query
+   NUM_TIMED_OUT_LOCKS_L(true, false),
+   NUM_TIMED_OUT_LOCKS_R(false, true),//just for query
 
    //RTT STUFF: everything is local && synchronous communication
    NUM_RTTS_PREPARE(true, false),   // L
@@ -137,7 +140,7 @@ public enum ExposedStatistic {
    RTT_GET_NO_WAIT(true, false),
    NUM_RTT_GET_NO_WAIT(true, false),
    REMOTE_ACK_TIME(false, true), //TEMPORARY ;)
-   REMOTE_TIME_BETWEEN_ACK_AND_COMMIT(false,true),
+   REMOTE_TIME_BETWEEN_ACK_AND_COMMIT(false, true),
 
    //SEND STUFF: everything is local && asynchronous communication .
    //NUM refers to the number of nodes INVOLVED in the distributed synchronization phases
@@ -341,6 +344,7 @@ public enum ExposedStatistic {
             stat.remoteIndex = remoteStatsSize++;
          }
       }
+      listRemoteStats();
    }
 
    public final int getLocalIndex() {
@@ -357,5 +361,13 @@ public enum ExposedStatistic {
 
    public final boolean isRemote() {
       return remote;
+   }
+
+   private static void listRemoteStats() {
+      Log log = LogFactory.getLog(ExposedStatistic.class);
+      for (ExposedStatistic stat : values())
+         if (stat.isRemote()) {
+            log.trace(stat + " " + stat.remoteIndex);
+         }
    }
 }

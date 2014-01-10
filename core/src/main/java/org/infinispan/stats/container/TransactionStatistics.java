@@ -58,6 +58,7 @@ public abstract class TransactionStatistics implements InfinispanStat {
    private long lastOpTimestamp;
    private long performedReads;
    private boolean prepareSent = false;
+   private GlobalTransaction gb;
 
    public TransactionStatistics(int size, Configuration configuration) {
       this.initTime = System.nanoTime();
@@ -103,6 +104,7 @@ public abstract class TransactionStatistics implements InfinispanStat {
    }
 
    public final void attachId(GlobalTransaction id) {
+      this.gb = id;
       this.id = id.globalId();
    }
 
@@ -247,12 +249,22 @@ public abstract class TransactionStatistics implements InfinispanStat {
 
    @Override
    public String toString() {
+      return "TransactionStatistics{" +
+              "id='" + id + '\'' +
+              ", statisticsContainer=" + statisticsContainer +
+              '}';
+   }
+
+   /*
+   @Override
+   public String toString() {
       return "initTime=" + initTime +
               ", isReadOnly=" + isReadOnly +
               ", isCommit=" + isCommit +
               ", transactionalClass=" + transactionalClass +
               '}';
    }
+   */
 
    public abstract void onPrepareCommand();
 

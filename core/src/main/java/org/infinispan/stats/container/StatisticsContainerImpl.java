@@ -26,36 +26,55 @@ package org.infinispan.stats.container;
 /**
  * Websiste: www.cloudtm.eu
  * Date: 01/05/12
+ *
  * @author Diego Didona <didona@gsd.inesc-id.pt>
  * @since 5.2
  */
-public class StatisticsContainerImpl implements StatisticsContainer{
+public class StatisticsContainerImpl implements StatisticsContainer {
 
    private final long[] stats;
 
-   public StatisticsContainerImpl(int size){
+   public StatisticsContainerImpl(int size) {
       this.stats = new long[size];
    }
 
-   public final void addValue(int param, double value){
-      this.stats[param]+=value;
+   public final void addValue(int param, double value) {
+      this.stats[param] += value;
    }
 
-   public final long getValue(int param){
+   public final long getValue(int param) {
       return this.stats[param];
    }
 
-   public final void mergeTo(ConcurrentGlobalContainer globalContainer, boolean local){
+   public final void mergeTo(ConcurrentGlobalContainer globalContainer, boolean local) {
       globalContainer.merge(stats, local);
    }
 
-   public final int size(){
+   public final int size() {
       return this.stats.length;
    }
 
-   public final void dump(){
-      for(int i=0; i<this.stats.length;i++){
-         System.out.println("** "+i+" : "+stats[i]+" **");
+   public final void dump() {
+      for (int i = 0; i < this.stats.length; i++) {
+         System.out.println("** " + i + " : " + stats[i] + " **");
       }
+   }
+
+   @Override
+   public String toString() {
+      return "StatisticsContainerImpl{" +
+              "[" + tostring() + "]" +
+              '}';
+   }
+
+   private String tostring() {
+      StringBuilder to = new StringBuilder();
+      for (int i = 0; i < stats.length; i++) {
+         to.append(i);
+         to.append("=");
+         to.append(stats[i]);
+         to.append(", ");
+      }
+      return to.toString();
    }
 }

@@ -70,10 +70,10 @@ public class InboundInvocationHandlerWrapper implements InboundInvocationHandler
          if (globalTransaction != null) {
             if (log.isDebugEnabled()) {
                log.debugf("The command %s is transactional and the global transaction is %s", command,
-                          globalTransaction.globalId());
+                       globalTransaction.globalId());
             }
             TransactionsStatisticsRegistry.attachRemoteTransactionStatistic(globalTransaction, command instanceof PrepareCommand ||
-                  command instanceof CommitCommand);
+                    command instanceof CommitCommand);
          } else {
             if (log.isDebugEnabled()) {
                log.debugf("The command %s is NOT transactional", command);
@@ -85,21 +85,29 @@ public class InboundInvocationHandlerWrapper implements InboundInvocationHandler
          if (txCompleteNotify) {
             currTime = System.nanoTime();
          }
-
+         if (log.isDebugEnabled() && globalTransaction != null) {
+            log.debugf("Going to handle command %s for %s", command,
+                    globalTransaction.globalId());
+         }
+         //NB: this can return immediately as the command can be handled async-ly!!!
          actual.handle(command, origin, response);
+         if (log.isDebugEnabled() && globalTransaction != null) {
+            log.debugf("Handled command %s for %s", command,
+                    globalTransaction.globalId());
+         }
 
          if (txCompleteNotify) {
             TransactionsStatisticsRegistry.addValueAndFlushIfNeeded(TX_COMPLETE_NOTIFY_EXECUTION_TIME,
-                                                                    System.nanoTime() - currTime, false);
+                    System.nanoTime() - currTime, false);
             TransactionsStatisticsRegistry.incrementValueAndFlushIfNeeded(NUM_TX_COMPLETE_NOTIFY_COMMAND, false);
          }
       } finally {
          if (globalTransaction != null) {
             if (log.isDebugEnabled()) {
-               log.debugf("Detach statistics for command %s", command, globalTransaction.globalId());
+               log.debugf("Finally: Detach statistics for command %s - %s", command, globalTransaction.globalId());
             }
             TransactionsStatisticsRegistry.detachRemoteTransactionStatistic(globalTransaction,
-                                                                            !transactionTable.containRemoteTx(globalTransaction));
+                    !transactionTable.containRemoteTx(globalTransaction));
          }
       }
    }

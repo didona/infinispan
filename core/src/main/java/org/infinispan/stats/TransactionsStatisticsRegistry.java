@@ -147,12 +147,16 @@ public final class TransactionsStatisticsRegistry {
          return;
       }
       final boolean debug = log.isDebugEnabled();
+
       TransactionStatistics txs = transactionStatistics == null ? thread.get() : transactionStatistics;
       if (txs == null) {
          if (debug) {
             log.debug("Trying to invoke terminate() but no transaction is associated to the thread");
          }
          return;
+      }
+      if (debug) {
+         log.debug("Trying to terminate " + txs.getId());
       }
       long init = System.nanoTime();
       txs.terminateTransaction();
@@ -253,7 +257,6 @@ public final class TransactionsStatisticsRegistry {
       boolean isLocal = tctx.isOriginLocal();
       if (isLocal) {
          TransactionStatistics t = initLocalTransaction();
-         t.attachId(tctx.getGlobalTransaction());
       }
       return thread.get();
    }
@@ -272,7 +275,6 @@ public final class TransactionsStatisticsRegistry {
          remoteTransactionStatistics.put(globalTransaction, rts);
          final String transactionClass = globalTransaction.getTransactionClass();
          if (transactionClass != null) {
-            rts.setTransactionalClass(transactionClass);
             registerTransactionalClassIfNeeded(transactionClass);
          }
       } else if (configuration == null) {

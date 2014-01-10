@@ -257,6 +257,7 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
       }
 
       TransactionStatistics transactionStatistics = initStatsIfNecessary(ctx);
+      transactionStatistics.attachId(ctx.getGlobalTransaction());
       transactionStatistics.onPrepareCommand();
       if (command.hasModifications()) {
          transactionStatistics.setUpdateTransaction();
@@ -278,8 +279,15 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
           *  track ALL the timed out lock requests!  Consider that a remote transaction that fails
           *  on this node WILL NOT be considered for statistics!!
           */
-         transactionStatistics.incrementValue(NUM_TIMED_OUT_LOCKS);
-         log.fatal("TOE : Timeout for " + ctx.getGlobalTransaction().globalId());
+
+         //Trying to take them separately...
+         if (ctx.isOriginLocal())
+            transactionStatistics.incrementValue(NUM_TIMED_OUT_LOCKS_L);
+         else
+            transactionStatistics.incrementValue(NUM_TIMED_OUT_LOCKS_R);
+
+         if (log.isDebugEnabled())
+            log.debug("TOE : Timeout for " + ctx.getGlobalTransaction().globalId());
          if (ctx.isOriginLocal()) {
             transactionStatistics.incrementValue(NUM_LOCK_FAILED_TIMEOUT);
          }
@@ -328,8 +336,8 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
                transactionStatistics.terminateTransaction();
             }
          }
-         if ((excp != null)) {
-            log.fatal("TOE : xact " + ctx.getGlobalTransaction().globalId() + " dead for " + excp.getClass() + " and with cause " + excp.getCause());
+         if ((excp != null) && log.isDebugEnabled()) {
+            log.debug("TOE : xact " + ctx.getGlobalTransaction().globalId() + " dead for " + excp.getClass() + " and with cause " + excp.getCause());
          }
       }
    }
@@ -2352,7 +2360,7 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
    @ManagedAttribute(description = "Timed out locks requests for local xacts",
            displayName = "LocalTimedOutLocks")
    public final long getLocalTimedOutLocks() {
-      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(NUM_TIMED_OUT_LOCKS, null));
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(NUM_TIMED_OUT_LOCKS_L, null));
    }
 
    @ManagedAttribute(description = "Timed out locks requests for remote xacts",
