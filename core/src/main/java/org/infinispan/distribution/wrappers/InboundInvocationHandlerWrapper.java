@@ -106,6 +106,8 @@ public class InboundInvocationHandlerWrapper implements InboundInvocationHandler
             if (log.isDebugEnabled()) {
                log.debugf("Finally: Detach statistics for command %s - %s", command, globalTransaction.globalId());
             }
+            //the handle method is async (it is supposed to finish AFTER this piece of code). We detach the remoteStat here and we have to "finalize" the stats
+            //ONLY in the case that, accidentally, this code is run after the handle, due to scheduling (second boolean parameter)
             TransactionsStatisticsRegistry.detachRemoteTransactionStatistic(globalTransaction,
                     !transactionTable.containRemoteTx(globalTransaction));
          }

@@ -23,17 +23,8 @@
 package org.infinispan.remoting;
 
 import org.infinispan.CacheException;
-import org.infinispan.commands.CancellableCommand;
-import org.infinispan.commands.CancellationService;
-import org.infinispan.commands.CommandsFactory;
-import org.infinispan.commands.ReplicableCommand;
-import org.infinispan.commands.TopologyAffectedCommand;
-import org.infinispan.commands.remote.CacheRpcCommand;
-import org.infinispan.commands.remote.ConfigurationStateCommand;
-import org.infinispan.commands.remote.GMUClusteredGetCommand;
-import org.infinispan.commands.remote.GarbageCollectorControlCommand;
-import org.infinispan.commands.remote.MultipleRpcCommand;
-import org.infinispan.commands.remote.SingleRpcCommand;
+import org.infinispan.commands.*;
+import org.infinispan.commands.remote.*;
 import org.infinispan.commands.tx.AbstractTransactionBoundaryCommand;
 import org.infinispan.commands.tx.GMUCommitCommand;
 import org.infinispan.commands.tx.PrepareCommand;
@@ -98,6 +89,7 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
    private RpcDispatcher.Marshaller marshaller = null;
    private BlockingTaskAwareExecutorService topologyExecutorService;
    private BlockingTaskAwareExecutorService abstractTransactionBoundaryExecutorService;
+
    @Inject
    public void inject(GlobalComponentRegistry gcr, Transport transport,
                       @ComponentName(KnownComponentNames.TOTAL_ORDER_EXECUTOR) BlockingTaskAwareExecutorService totalOrderExecutorService,
@@ -148,7 +140,7 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
          }
          Object retval = cmd.perform(null);
          Response response = respGen.getResponse(cmd, retval);
-         if(trace)log.tracef("About to send back response %s for command %s", response, cmd);
+         if (trace) log.tracef("About to send back response %s for command %s", response, cmd);
          return response;
       } catch (Exception e) {
          log.error("Exception executing command", e);
@@ -219,7 +211,7 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
                final boolean stats = TransactionsStatisticsRegistry.isActive();
                if (stats) {
                   TransactionsStatisticsRegistry.attachRemoteTransactionStatistic(command.getGlobalTransaction(),
-                                                                                  true);
+                          true);
                }
                final boolean isServiceTime = TransactionsStatisticsRegistry.isSampleServiceTime();
                final TransactionStatistics tx = stats ? TransactionsStatisticsRegistry.getTransactionStatistics() : null;
@@ -259,7 +251,7 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
 
                if (stats) {
                   TransactionsStatisticsRegistry.detachRemoteTransactionStatistic(command.getGlobalTransaction(),
-                                                                                  command.isOnePhaseCommit());
+                          command.isOnePhaseCommit());
                   if (cmd instanceof TotalOrderGMUPrepareCommand) {
                      PiggyBackStat pbs = new PiggyBackStat(waitTime);
                      ((AbstractResponse) resp).setPiggyBackStat(pbs);
@@ -354,8 +346,8 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
                try {
                   //RemoteTransactionStatistic has been attached and detached by the IIHW, so it has to be attached again to this thread
                   final TransactionStatistics transactionStatistics =
-                        TransactionsStatisticsRegistry.attachRemoteTransactionStatistic(
-                              gmuCommitCommand.getGlobalTransaction(), true);
+                          TransactionsStatisticsRegistry.attachRemoteTransactionStatistic(
+                                  gmuCommitCommand.getGlobalTransaction(), true);
                   if (transactionStatistics != null && hasWaited) {
                      transactionStatistics.addValue(WAIT_TIME_IN_COMMIT_QUEUE, System.nanoTime() - arrivalTime);
                      transactionStatistics.incrementValue(NUM_WAITS_IN_COMMIT_QUEUE);
@@ -380,8 +372,8 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
          gmuExecutorService.checkForReadyTasks();
          return;
       } else if ((cmd instanceof StateResponseCommand) ||
-            ((cmd instanceof StateRequestCommand) && ( ((StateRequestCommand)cmd).getType() == StateRequestCommand.Type.GET_TRANSACTIONS || ((StateRequestCommand)cmd).getType() == StateRequestCommand.Type.START_STATE_TRANSFER)) ||
-            (cmd instanceof GarbageCollectorControlCommand)){
+              ((cmd instanceof StateRequestCommand) && (((StateRequestCommand) cmd).getType() == StateRequestCommand.Type.GET_TRANSACTIONS || ((StateRequestCommand) cmd).getType() == StateRequestCommand.Type.START_STATE_TRANSFER)) ||
+              (cmd instanceof GarbageCollectorControlCommand)) {
 
          topologyExecutorService.execute(new BlockingRunnable() {
             @Override
@@ -404,14 +396,14 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
 
             @Override
             public final String toString() {
-               return "Topology Executor Thread - "+cmd.toString();
+               return "Topology Executor Thread - " + cmd.toString();
             }
          });
 
          return;
       }
       //This is the case of Prepare/RollbackCommand also for GMU; or CommitCommand for non-GMU (GMUCommit is handled before)
-      else if (cmd instanceof AbstractTransactionBoundaryCommand){
+      else if (cmd instanceof AbstractTransactionBoundaryCommand) {
 
          final StateTransferLock stateTransferLock = cr.getStateTransferLock();
          final int commandTopologyId = extractCommandTopologyId(cmd);
@@ -433,8 +425,10 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
                   resp = new ExceptionResponse(new CacheException("Problems invoking command.", throwable));
                }
                reply(response, resp);
+               //Before the gmuExecutorService continues handling other stuff, we have to detach the current xact.
+               TransactionsStatisticsRegistry.detachRemoteTransactionStatistic(((AbstractTransactionBoundaryCommand) cmd).getGlobalTransaction(), true);
                if (cr.getComponent(Configuration.class).locking().isolationLevel() == IsolationLevel.SERIALIZABLE &&
-                     cmd instanceof RollbackCommand) {
+                       cmd instanceof RollbackCommand) {
                   gmuExecutorService.checkForReadyTasks();
                }
             }
@@ -445,11 +439,11 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
             }
          });
          if (cr.getComponent(Configuration.class).locking().isolationLevel() == IsolationLevel.SERIALIZABLE &&
-               cmd instanceof RollbackCommand) {
+                 cmd instanceof RollbackCommand) {
             gmuExecutorService.checkForReadyTasks();
          }
          return;
-       }
+      }
       Response resp = handleInternal(cmd, cr);
 
       // A null response is valid and OK ...
@@ -459,7 +453,7 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
       }
       reply(response, resp);
       if (cr.getComponent(Configuration.class).locking().isolationLevel() == IsolationLevel.SERIALIZABLE &&
-            cmd instanceof RollbackCommand) {
+              cmd instanceof RollbackCommand) {
          gmuExecutorService.checkForReadyTasks();
       }
    }
