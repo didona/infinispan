@@ -474,7 +474,7 @@ public class NodeScopeStatisticCollector {
          case NUM_TIMED_OUT_LOCKS:
             return snapshot.getLocal(NUM_TIMED_OUT_LOCKS);
          case NUM_TIMED_OUT_LOCKS_R:
-            return snapshot.getRemote(NUM_TIMED_OUT_LOCKS_R);
+            return snapshot.getRemote(NUM_TIMED_OUT_LOCKS);
          case WR_TX_SUCCESSFUL_EXECUTION_TIME:
             return microAvgLocal(snapshot, NUM_COMMITTED_WR_TX, WR_TX_SUCCESSFUL_EXECUTION_TIME);
          case WR_TX_ABORTED_EXECUTION_TIME:
