@@ -293,6 +293,9 @@ public final class TransactionsStatisticsRegistry {
 
    public static void detachRemoteTransactionStatistic(GlobalTransaction globalTransaction, boolean finished) {
       if (!active || thread.get() == null) {
+         if (log.isTraceEnabled()) {
+            log.tracef("Not detaching %s as I cannot reference it", globalTransaction.globalId());
+         }
          return;
       }
       //DIE: is finished == true either both for CommitCommand and RollbackCommand?

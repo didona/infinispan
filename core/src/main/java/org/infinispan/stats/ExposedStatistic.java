@@ -45,6 +45,8 @@ public enum ExposedStatistic {
    NUM_REMOTE_ABORTED_LOCKS(true, true),
    NUM_HELD_LOCKS(true, true),            // C
    NUM_HELD_LOCKS_SUCCESS_TX(true, false),   // L
+   NUM_HELD_LOCKS_L(true,false),//for query
+   NUM_HELD_LOCKS_R(false,true), //for query
    NUM_COMMITTED_RO_TX(true, true), // C
    NUM_COMMITTED_WR_TX(true, true), // C
    NUM_ABORTED_WR_TX(true, true),   // C

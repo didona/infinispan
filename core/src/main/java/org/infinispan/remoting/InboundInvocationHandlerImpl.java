@@ -425,10 +425,14 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
                   resp = new ExceptionResponse(new CacheException("Problems invoking command.", throwable));
                }
                reply(response, resp);
+               boolean gmuRollback = cr.getComponent(Configuration.class).locking().isolationLevel() == IsolationLevel.SERIALIZABLE &&
+                       cmd instanceof RollbackCommand;
                //Before the gmuExecutorService continues handling other stuff, we have to detach the current xact.
-               TransactionsStatisticsRegistry.detachRemoteTransactionStatistic(((AbstractTransactionBoundaryCommand) cmd).getGlobalTransaction(), true);
-               if (cr.getComponent(Configuration.class).locking().isolationLevel() == IsolationLevel.SERIALIZABLE &&
-                       cmd instanceof RollbackCommand) {
+               if (log.isTraceEnabled()) {
+                  log.trace("Detaching for command " + cmd.getClass());
+               }
+               TransactionsStatisticsRegistry.detachRemoteTransactionStatistic(((AbstractTransactionBoundaryCommand) cmd).getGlobalTransaction(), cmd instanceof RollbackCommand);
+               if (gmuRollback) {
                   gmuExecutorService.checkForReadyTasks();
                }
             }

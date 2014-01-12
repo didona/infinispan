@@ -599,6 +599,18 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
       return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(NUM_HELD_LOCKS, null));
    }
 
+   @ManagedAttribute(description = "Num acquired locks by local xacts",
+           displayName = "Num acquired locks by local xacts")
+   public long getNumLocalAcquiredLocks() {
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(NUM_HELD_LOCKS_L, null));
+   }
+
+   @ManagedAttribute(description = "Num acquired locks by remote xacts",
+           displayName = "Num acquired locks by remote xacts")
+   public long getNumRemoteAcquiredLocks() {
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(NUM_HELD_LOCKS_R, null));
+   }
+
    @ManagedAttribute(description = "Average successful write transaction duration (in microseconds)",
            displayName = "Avg Write Transaction Duration")
    public long getAvgWriteTxDuration() {
