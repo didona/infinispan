@@ -325,7 +325,6 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
                transactionStatistics.incrementValue(NUM_LOCK_FAILED_TIMEOUT);
             } else if (e.getCause() instanceof ValidationException) {
                transactionStatistics.incrementValue(NUM_ABORTED_TX_DUE_TO_VALIDATION);
-
             }
          }
          throw e;
@@ -2379,6 +2378,30 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
            displayName = "RemoteTimedOutLocks")
    public final long getRemoteTimedOutLocks() {
       return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(NUM_TIMED_OUT_LOCKS_R, null));
+   }
+
+   @ManagedAttribute(description = "NumRemoteRemoteGets served",
+           displayName = "Served remote gets")
+   public final long getNumRemoteRemoteGets() {
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(NUM_REMOTE_REMOTE_GETS, null));
+   }
+
+   @ManagedAttribute(description = "NumRemoteCommits",
+              displayName = "Served remote commits")
+   public final long getNumRemoteCommits(){
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(NUM_UPDATE_TX_REMOTE_COMMIT, null));
+   }
+
+   @ManagedAttribute(description = "NumRemotePrepares",
+              displayName = "Served remote prepares")
+   public final long getNumRemotePrepares(){
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(NUM_UPDATE_TX_PREPARED_R, null));
+   }
+
+   @ManagedAttribute(description = "NumRemoteRollbacks",
+              displayName = "Served remote rollbacks")
+   public final long getNumRemoteRollbacks(){
+      return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(NUM_UPDATE_TX_REMOTE_ROLLBACK, null));
    }
 
    //NB: readOnly transactions are never aborted (RC, RR, GMU)

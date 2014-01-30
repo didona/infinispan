@@ -188,6 +188,7 @@ public enum ExposedStatistic {
    //Number of prepares. This is used to know how many xacts reach the prepare phase.
    NUM_UPDATE_TX_GOT_TO_PREPARE(true, true),
    NUM_UPDATE_TX_PREPARED(true, true), //I need this to compute the time spent by remote xacts which abort due to abort on other nodes
+   NUM_UPDATE_TX_PREPARED_R(false, true), //just for query
    //Cpu demand for CommitCommand handling for a transaction. It can be local or remote.
    UPDATE_TX_LOCAL_COMMIT_S(true, false),
    UPDATE_TX_LOCAL_COMMIT_R(true, false),     // C

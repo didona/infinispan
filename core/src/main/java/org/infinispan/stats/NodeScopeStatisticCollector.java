@@ -713,6 +713,14 @@ public class NodeScopeStatisticCollector {
             return avgLocal(snapshot, NUM_COMMIT_LOG_GET_AVAILABLE_VERSION_LESS_THAN, COMMIT_LOG_GET_AVAILABLE_VERSION_LESS_THAN_COUNT);
          case COMMIT_LOG_GET_READ_VERSION_COUNT:
             return avgLocal(snapshot, NUM_COMMIT_LOG_GET_READ_VERSION, COMMIT_LOG_GET_READ_VERSION_COUNT);
+         case NUM_REMOTE_REMOTE_GETS:
+            return snapshot.getRemote(param);
+         case  NUM_UPDATE_TX_REMOTE_COMMIT:
+            return snapshot.getRemote(NUM_UPDATE_TX_REMOTE_COMMIT);
+         case  NUM_UPDATE_TX_PREPARED_R:
+            return snapshot.getRemote(NUM_UPDATE_TX_PREPARED);
+         case NUM_UPDATE_TX_REMOTE_ROLLBACK :
+            return snapshot.getRemote(NUM_UPDATE_TX_REMOTE_ROLLBACK);
          default:
             throw new NoIspnStatException("Invalid statistic " + param);
       }
