@@ -448,8 +448,27 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
          }
          return;
       }
+      //For repeatable read: remote get
+      long init = 0, initS = 0;
+      final boolean stats = TransactionsStatisticsRegistry.isActive();
+      final boolean service = stats && TransactionsStatisticsRegistry.isSampleServiceTime();
+      final boolean rr_remoteGet = cmd instanceof ClusteredGetCommand && (!(cmd instanceof GMUClusteredGetCommand));
+      if (stats) {
+         init = System.nanoTime();
+         if (service)
+            initS = TransactionsStatisticsRegistry.getThreadCPUTime();
+      }
+
       Response resp = handleInternal(cmd, cr);
 
+      if (stats && rr_remoteGet) {
+
+         TransactionsStatisticsRegistry.addValueAndFlushIfNeeded(REMOTE_REMOTE_GET_REPLY_SIZE, getReplySize(resp), false);
+         TransactionsStatisticsRegistry.incrementValueAndFlushIfNeeded(NUM_REMOTE_REMOTE_GETS, false);
+         TransactionsStatisticsRegistry.addValueAndFlushIfNeeded(REMOTE_REMOTE_GET_R, System.nanoTime() - init, false);
+         if (service)
+            TransactionsStatisticsRegistry.addValueAndFlushIfNeeded(REMOTE_REMOTE_GET_S, TransactionsStatisticsRegistry.getThreadCPUTime() - initS, false);
+      }
       // A null response is valid and OK ...
       if (trace && resp != null && !resp.isValid()) {
          // invalid response
