@@ -153,19 +153,23 @@ public class RpcManagerWrapper implements RpcManager {
       final TransactionStatistics transactionStatistics = TransactionsStatisticsRegistry.getTransactionStatistics();
 
       long currentTime = 0;
-      if (isPrepareCmd && transactionStatistics != null) {
-         currentTime = System.nanoTime();
+      final boolean txs = transactionStatistics != null;
+      if (txs) {
          transactionStatistics.markPrepareSent();
+         if (isPrepareCmd) {
+            currentTime = System.nanoTime();
+         }
       }
       Map<Address, Response> ret = actual.invokeRemotely(recipients, rpc, sync, usePriorityQueue, totalOrder);
-      if (transactionStatistics != null) {
+      if (txs) {
          updateStats(rpc, sync, currentTime, recipients, null, ret);
       }
       return ret;
    }
 
    @Override
-   public ResponseFuture invokeRemotelyWithFuture(Collection<Address> recipients, ReplicableCommand rpc, boolean usePriorityQueue, boolean totalOrder) {
+   public ResponseFuture invokeRemotelyWithFuture(Collection<Address> recipients, ReplicableCommand rpc,
+                                                  boolean usePriorityQueue, boolean totalOrder) {
       long currentTime = System.nanoTime();
       ResponseFuture ret = actual.invokeRemotelyWithFuture(recipients, rpc, usePriorityQueue, totalOrder);
       updateStats(rpc, true, currentTime, recipients, ret, null);
@@ -181,7 +185,8 @@ public class RpcManagerWrapper implements RpcManager {
    }
 
    @Override
-   public void invokeRemotelyInFuture(Collection<Address> recipients, ReplicableCommand rpc, boolean usePriorityQueue,
+   public void invokeRemotelyInFuture(Collection<Address> recipients, ReplicableCommand rpc,
+                                      boolean usePriorityQueue,
                                       NotifyingNotifiableFuture<Object> future) {
       long currentTime = System.nanoTime();
       actual.invokeRemotelyInFuture(recipients, rpc, usePriorityQueue, future);
@@ -189,7 +194,8 @@ public class RpcManagerWrapper implements RpcManager {
    }
 
    @Override
-   public void invokeRemotelyInFuture(Collection<Address> recipients, ReplicableCommand rpc, boolean usePriorityQueue,
+   public void invokeRemotelyInFuture(Collection<Address> recipients, ReplicableCommand rpc,
+                                      boolean usePriorityQueue,
                                       NotifyingNotifiableFuture<Object> future, long timeout) {
       long currentTime = System.nanoTime();
       actual.invokeRemotelyInFuture(recipients, rpc, usePriorityQueue, future, timeout);
@@ -197,7 +203,8 @@ public class RpcManagerWrapper implements RpcManager {
    }
 
    @Override
-   public void invokeRemotelyInFuture(Collection<Address> recipients, ReplicableCommand rpc, boolean usePriorityQueue,
+   public void invokeRemotelyInFuture(Collection<Address> recipients, ReplicableCommand rpc,
+                                      boolean usePriorityQueue,
                                       NotifyingNotifiableFuture<Object> future, long timeout, boolean ignoreLeavers) {
       long currentTime = System.nanoTime();
       actual.invokeRemotelyInFuture(recipients, rpc, usePriorityQueue, future, timeout, ignoreLeavers);
