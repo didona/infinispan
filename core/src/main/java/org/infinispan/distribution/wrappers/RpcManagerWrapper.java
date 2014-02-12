@@ -155,9 +155,9 @@ public class RpcManagerWrapper implements RpcManager {
       long currentTime = 0;
       final boolean txs = transactionStatistics != null;
       if (txs) {
-         transactionStatistics.markPrepareSent();
+         currentTime = System.nanoTime();
          if (isPrepareCmd) {
-            currentTime = System.nanoTime();
+            transactionStatistics.markPrepareSent();
          }
       }
       Map<Address, Response> ret = actual.invokeRemotely(recipients, rpc, sync, usePriorityQueue, totalOrder);
@@ -344,6 +344,9 @@ public class RpcManagerWrapper implements RpcManager {
             transactionStatistics.addValue(commandSizeStat, getCommandSize(command));
          }
       } else {
+         if (log.isTraceEnabled()) {
+            log.trace("Flushing stats without attached transaction :|");
+         }
          TransactionsStatisticsRegistry.addValueAndFlushIfNeeded(durationStat, wallClockTimeTaken, true);
          TransactionsStatisticsRegistry.incrementValueAndFlushIfNeeded(counterStat, true);
          TransactionsStatisticsRegistry.addValueAndFlushIfNeeded(recipientSizeStat, recipientListSize(recipients), true);
