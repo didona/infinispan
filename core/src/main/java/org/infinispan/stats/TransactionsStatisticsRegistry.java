@@ -206,6 +206,7 @@ public final class TransactionsStatisticsRegistry {
       }
    }
 
+
    public static void flushPendingRemoteLocksIfNeeded(GlobalTransaction id) {
       if (!active) {
          return;
@@ -219,7 +220,7 @@ public final class TransactionsStatisticsRegistry {
       if (pendingLocks.containsKey(id.globalId())) {
          if (trace) {
             log.trace("DLOCKS : YES: Going to flush locks for " + (id.isRemote() ? "remote " : "local ") + "xact " + id.globalId());
-            dumpLocksPRE();
+            //if (!dumped) dumpLocksPRE();
          }
          deferredRemoteLockingTimeSampling(pendingLocks.get(id.globalId()));
          pendingLocks.remove(id.globalId());

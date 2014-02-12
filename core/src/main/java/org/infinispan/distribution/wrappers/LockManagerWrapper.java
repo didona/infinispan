@@ -229,7 +229,8 @@ public class LockManagerWrapper implements LockManager {
       }
       if (trace)
          log.trace("DLOCKS going to flush in RR mode for " + lockOwner);
-      txs.immediateLockFlushIfNeeded();
+      txs.immediateLockFlushIfNeededAndClearLocks();
+
 
    }
 
@@ -237,21 +238,13 @@ public class LockManagerWrapper implements LockManager {
    private void flushPendingLocksIfNeeded(GlobalTransaction lockOwner) {
       final boolean trace = log.isTraceEnabled();
       if (trace) {
-         if (!sampleHoldTimes) {
-            log.trace("DLOCKS: not sampling for " + lockOwner.globalId() + " as sampleHT is not enabled");
-         }
          if (!LockRelatedStatsHelper.maybePendingLocks(lockOwner)) {
             log.trace("DLOCKS: not sampling for " + lockOwner.globalId() + " as no locks may be pending");
+         } else {
+            log.trace("DLOCKS : Locks MAY be pending for " + lockOwner.globalId() + "; let's find out");
          }
       }
-
-      if (LockRelatedStatsHelper.maybePendingLocks(lockOwner)) {
-         if (trace) {
-            log.trace("DLOCKS : Will I flush locks for " + lockOwner.globalId() + "?");
-         }
-         TransactionsStatisticsRegistry.flushPendingRemoteLocksIfNeeded(lockOwner);
-      }
-
+      TransactionsStatisticsRegistry.flushPendingRemoteLocksIfNeeded(lockOwner);
    }
 
    private void flushLocksIfNeeded(GlobalTransaction lockOwner, final boolean isGMU) {

@@ -174,21 +174,33 @@ public abstract class TransactionStatistics implements InfinispanStat {
       this.addValue(param, 1);
    }
 
+   public void immediateLockFlushIfNeededAndClearLocks() {
+      if (immediateLockFlushIfNeeded())
+         clearLocks();
+   }
 
-   public void immediateLockFlushIfNeeded() {
+
+   private void clearLocks() {
+      this.takenLocks.clear();
+   }
+
+   private boolean immediateLockFlushIfNeeded() {
       final Log log = getLog();
       int heldLocks = this.takenLocks.size();
+      boolean flushed = false;
       if (heldLocks > 0) {
          boolean remote = !(this instanceof LocalTransactionStatistics);
          if (!LockRelatedStatsHelper.shouldAppendLocks(configuration, isCommit, remote, id)) {
             if (trace)
                log.trace("DLOCKS : TID " + Thread.currentThread().getId() + " Sampling locks for " + (remote ? "remote " : "local ") + " transaction " + this.id + " commit? " + isCommit);
             immediateLockingTimeSampling(heldLocks, isCommit);
+            flushed = true;
          } else {
             if (trace)
                log.trace("DLOCKS : NOT sampling locks for " + (remote ? "remote " : "local ") + " transaction " + this.id);
          }
       }
+      return flushed;
    }
 
    /**
@@ -211,7 +223,7 @@ public abstract class TransactionStatistics implements InfinispanStat {
             In another case we have that the end of the xact and the release of the locks don't coincide, and the lock holding time has to be "injected" upon release
             this is the case of GMU with commit async, for example, or if locks are actually released upon receiving the TxCompletionNotificationCommand
          */
-      immediateLockFlushIfNeeded();
+      immediateLockFlushIfNeededAndClearLocks();
       /*
       int heldLocks = this.takenLocks.size();
       if (heldLocks > 0) {

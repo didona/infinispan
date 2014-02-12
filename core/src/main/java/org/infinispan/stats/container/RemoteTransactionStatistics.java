@@ -70,7 +70,7 @@ public class RemoteTransactionStatistics extends TransactionStatistics {
    }
 
    /*
-   In our cases, this should be never called (A remote xact always flush locks async-ly
+   This should be never called in GMU: only in RR, where there are no async lock flushes
    */
    protected void immediateLockingTimeSampling(int heldLocks, boolean isCommit) {
       double cumulativeLockHoldTime = this.computeCumulativeLockHoldTime(heldLocks, System.nanoTime());
