@@ -49,6 +49,7 @@ public final class TransactionsStatisticsRegistry {
 
    public static final String DEFAULT_ISPN_CLASS = "DEFAULT_ISPN_CLASS";
    private static final Log log = LogFactory.getLog(TransactionsStatisticsRegistry.class);
+   private static final boolean trace = log.isTraceEnabled();
    //Now it is unbounded, we can define a MAX_NO_CLASSES
    private static final ConcurrentMap<String, NodeScopeStatisticCollector> transactionalClassesStatsMap
            = ConcurrentMapFactory.makeConcurrentMap();
@@ -293,20 +294,20 @@ public final class TransactionsStatisticsRegistry {
 
    public static void detachRemoteTransactionStatistic(GlobalTransaction globalTransaction, boolean finished) {
       if (!active || thread.get() == null) {
-         if (log.isTraceEnabled()) {
+         if (trace) {
             log.tracef("Not detaching %s as I cannot reference it", globalTransaction.globalId());
          }
          return;
       }
       //DIE: is finished == true either both for CommitCommand and RollbackCommand?
       if (finished) {
-         if (log.isTraceEnabled()) {
+         if (trace) {
             log.tracef("Detach remote transaction statistic and finish transaction %s", globalTransaction.globalId());
          }
          terminateTransaction(null);
          remoteTransactionStatistics.remove(globalTransaction);
       } else {
-         if (log.isTraceEnabled()) {
+         if (trace) {
             log.tracef("Detach remote transaction statistic for transaction %s", globalTransaction.globalId());
          }
          thread.remove();
@@ -346,7 +347,6 @@ public final class TransactionsStatisticsRegistry {
 
    private static void appendLocks(Map<Object, Long> locks, String id) {
       if (locks != null && !locks.isEmpty()) {
-         final boolean trace = log.isTraceEnabled();
          if (trace) {
             log.trace("DLOCKS : Appending locks for " + id);
             dumpLocksPRE();
@@ -387,7 +387,7 @@ public final class TransactionsStatisticsRegistry {
       //Not overriding the InitialValue method leads me to have "null" at the first invocation of get()
       TransactionStatistics lts = thread.get();
       if (lts == null && configuration != null) {
-         if (log.isTraceEnabled()) {
+         if (trace) {
             log.tracef("Init a new local transaction statistics");
          }
          lts = new LocalTransactionStatistics(configuration);
@@ -395,7 +395,7 @@ public final class TransactionsStatisticsRegistry {
          //Here only when transaction starts
          TransactionTS lastTS = lastTransactionTS.get();
          if (lastTS == null) {
-            if (log.isTraceEnabled())
+            if (trace)
                log.tracef("Init a new local transaction statistics for Timestamp");
             lastTransactionTS.set(new TransactionTS());
          } else {
@@ -407,7 +407,7 @@ public final class TransactionsStatisticsRegistry {
             log.debugf("Trying to create a local transaction statistics in a not initialized Transaction Statistics Registry");
          }
       } else {
-         if (log.isTraceEnabled()) {
+         if (trace) {
             log.tracef("Local transaction statistic is already initialized: %s", lts);
          }
       }

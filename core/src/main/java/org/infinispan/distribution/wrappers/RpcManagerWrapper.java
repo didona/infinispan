@@ -152,8 +152,9 @@ public class RpcManagerWrapper implements RpcManager {
       boolean isPrepareCmd = rpc instanceof PrepareCommand;
       final TransactionStatistics transactionStatistics = TransactionsStatisticsRegistry.getTransactionStatistics();
 
-      long currentTime = System.nanoTime();
+      long currentTime = 0;
       if (isPrepareCmd && transactionStatistics != null) {
+         currentTime = System.nanoTime();
          transactionStatistics.markPrepareSent();
       }
       Map<Address, Response> ret = actual.invokeRemotely(recipients, rpc, sync, usePriorityQueue, totalOrder);
@@ -226,7 +227,7 @@ public class RpcManagerWrapper implements RpcManager {
    private void updateStats(ReplicableCommand command, boolean sync, long init, Collection<Address> recipients, ResponseFuture future, Map<Address, Response> responseMap) {
       final TransactionStatistics transactionStatistics = TransactionsStatisticsRegistry.getTransactionStatistics();
       if (!TransactionsStatisticsRegistry.isActive() || transactionStatistics == null &&
-            !(command instanceof TxCompletionNotificationCommand)) {
+              !(command instanceof TxCompletionNotificationCommand)) {
          if (log.isTraceEnabled()) {
             log.tracef("Does not update stats for command %s. No statistic collector found", command);
          }
@@ -308,7 +309,7 @@ public class RpcManagerWrapper implements RpcManager {
          }
          //Remote gets are routed to a *single* remote node
          Address recipient = recipients.iterator().next();
-         ((LocalTransactionStatistics)transactionStatistics).addReadNodeIfAbsent(recipient);
+         ((LocalTransactionStatistics) transactionStatistics).addReadNodeIfAbsent(recipient);
       } else if (command instanceof TxCompletionNotificationCommand) {
          durationStat = ASYNC_COMPLETE_NOTIFY;
          counterStat = NUM_ASYNC_COMPLETE_NOTIFY;
@@ -322,12 +323,12 @@ public class RpcManagerWrapper implements RpcManager {
 
       if (log.isTraceEnabled()) {
          log.tracef("Update stats for command %s. Is sync? %s. Duration stat is %s, counter stats is %s, " +
-                          "recipient size stat is %s", command, sync, durationStat, counterStat, recipientSizeStat);
+                 "recipient size stat is %s", command, sync, durationStat, counterStat, recipientSizeStat);
       }
 
       if (future != null) {
          future.setUpdateStats(transactionStatistics, init, durationStat, counterStat, recipientSizeStat, commandSizeStat,
-                               getCommandSize(command), recipientListSize(recipients));
+                 getCommandSize(command), recipientListSize(recipients));
       } else if (transactionStatistics != null) {
          transactionStatistics.addValue(durationStat, wallClockTimeTaken);
          transactionStatistics.incrementValue(counterStat);
@@ -381,7 +382,6 @@ public class RpcManagerWrapper implements RpcManager {
       }
       return 0;
    }
-
 
 
    private class WaitStats {

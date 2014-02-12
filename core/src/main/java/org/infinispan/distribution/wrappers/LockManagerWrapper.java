@@ -78,8 +78,9 @@ public class LockManagerWrapper implements LockManager {
 
    @Override
    /*
-   THIS is the method invoked at commit/abort time to unlock keys
-    */
+   THIS is the method invoked at commit/abort time to unlock keys in GMU
+   //TODO: what about RR? Does it use the completion notification command???? (and thus uses the unlock from the above method?)
+   */
    public void unlockAll(InvocationContext ctx) {
       final boolean trace = log.isTraceEnabled();
       //If we're not in tx class, do nothing

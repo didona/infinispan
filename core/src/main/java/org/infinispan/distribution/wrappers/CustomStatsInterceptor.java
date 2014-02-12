@@ -89,6 +89,7 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
    private Configuration configuration;
    private RpcManager rpcManager;
    private DistributionManager distributionManager;
+   final boolean trace = log.isTraceEnabled();
 
    @Inject
    public void inject(TransactionTable transactionTable, Configuration config, DistributionManager distributionManager) {
@@ -207,7 +208,7 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
 
    @Override
    public Object visitCommitCommand(TxInvocationContext ctx, CommitCommand command) throws Throwable {
-      if (log.isTraceEnabled()) {
+      if (trace) {
          log.tracef("Visit Commit command %s. Is it local?. Transaction is %s", command,
                  ctx.isOriginLocal(), command.getGlobalTransaction().globalId());
       }
@@ -221,12 +222,12 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
       transactionStatistics.addNTBCValue(currTime);
 
       if (LockRelatedStatsHelper.shouldAppendLocks(configuration, true, !ctx.isOriginLocal(), ctx.getGlobalTransaction().globalId())) {
-         if (log.isTraceEnabled())
+         if (trace)
             log.trace("DLOCKS : Appending locks for " + ((!ctx.isOriginLocal()) ? "remote " : "local ") + "transaction " +
                     ctx.getGlobalTransaction().globalId());
          TransactionsStatisticsRegistry.appendLocks();
       } else {
-         if (log.isTraceEnabled())
+         if (trace)
             log.trace("DLOCKS : Not appending locks for " + ((!ctx.isOriginLocal()) ? "remote " : "local ") + "transaction " +
                     ctx.getGlobalTransaction().globalId());
       }
@@ -2387,20 +2388,20 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
    }
 
    @ManagedAttribute(description = "NumRemoteCommits",
-              displayName = "Served remote commits")
-   public final long getNumRemoteCommits(){
+           displayName = "Served remote commits")
+   public final long getNumRemoteCommits() {
       return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(NUM_UPDATE_TX_REMOTE_COMMIT, null));
    }
 
    @ManagedAttribute(description = "NumRemotePrepares",
-              displayName = "Served remote prepares")
-   public final long getNumRemotePrepares(){
+           displayName = "Served remote prepares")
+   public final long getNumRemotePrepares() {
       return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(NUM_UPDATE_TX_PREPARED_R, null));
    }
 
    @ManagedAttribute(description = "NumRemoteRollbacks",
-              displayName = "Served remote rollbacks")
-   public final long getNumRemoteRollbacks(){
+           displayName = "Served remote rollbacks")
+   public final long getNumRemoteRollbacks() {
       return handleLong((Long) TransactionsStatisticsRegistry.getAttribute(NUM_UPDATE_TX_REMOTE_ROLLBACK, null));
    }
 

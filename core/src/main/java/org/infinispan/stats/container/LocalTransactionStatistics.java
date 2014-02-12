@@ -85,9 +85,9 @@ public class LocalTransactionStatistics extends TransactionStatistics {
       if (!isCommit())
          return;
       final boolean sampleServiceTime = TransactionsStatisticsRegistry.isSampleServiceTime();
-      long cpuTime = sampleServiceTime ? TransactionsStatisticsRegistry.getThreadCPUTime() : 0;
-      long now = System.nanoTime();
-      long readNodes = this.nodesReadFrom.size();
+      final long cpuTime = sampleServiceTime ? TransactionsStatisticsRegistry.getThreadCPUTime() : 0;
+      final long now = System.nanoTime();
+      final long readNodes = this.nodesReadFrom.size();
       if (!isReadOnly()) {
          long numPuts = this.getValue(NUM_PUT);
          this.addValue(FIRST_WRITE_INDEX, this.readsBeforeFirstWrite);

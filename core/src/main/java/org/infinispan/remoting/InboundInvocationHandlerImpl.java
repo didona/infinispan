@@ -25,10 +25,7 @@ package org.infinispan.remoting;
 import org.infinispan.CacheException;
 import org.infinispan.commands.*;
 import org.infinispan.commands.remote.*;
-import org.infinispan.commands.tx.AbstractTransactionBoundaryCommand;
-import org.infinispan.commands.tx.GMUCommitCommand;
-import org.infinispan.commands.tx.PrepareCommand;
-import org.infinispan.commands.tx.RollbackCommand;
+import org.infinispan.commands.tx.*;
 import org.infinispan.commands.tx.totalorder.TotalOrderGMUPrepareCommand;
 import org.infinispan.commands.tx.totalorder.TotalOrderPrepareCommand;
 import org.infinispan.configuration.cache.Configuration;
@@ -431,7 +428,9 @@ public class InboundInvocationHandlerImpl implements InboundInvocationHandler {
                if (log.isTraceEnabled()) {
                   log.trace("Detaching for command " + cmd.getClass());
                }
-               TransactionsStatisticsRegistry.detachRemoteTransactionStatistic(((AbstractTransactionBoundaryCommand) cmd).getGlobalTransaction(), cmd instanceof RollbackCommand);
+               //TODO: check: are we really sure that a Prepare Command that aborts does not wait for the rollback?
+               boolean transactionFinished = cmd instanceof RollbackCommand || cmd instanceof CommitCommand;
+               TransactionsStatisticsRegistry.detachRemoteTransactionStatistic(((AbstractTransactionBoundaryCommand) cmd).getGlobalTransaction(), transactionFinished);
                if (gmuRollback) {
                   gmuExecutorService.checkForReadyTasks();
                }

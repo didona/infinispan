@@ -716,7 +716,7 @@ public class NodeScopeStatisticCollector {
          case NUM_REMOTE_REMOTE_GETS:
             return snapshot.getRemote(param);
          case  NUM_UPDATE_TX_REMOTE_COMMIT:
-            return snapshot.getRemote(NUM_UPDATE_TX_REMOTE_COMMIT);
+            return snapshot.getRemote(NUM_COMMITTED_WR_TX);
          case  NUM_UPDATE_TX_PREPARED_R:
             return snapshot.getRemote(NUM_UPDATE_TX_PREPARED);
          case NUM_UPDATE_TX_REMOTE_ROLLBACK :

@@ -59,6 +59,7 @@ public abstract class TransactionStatistics implements InfinispanStat {
    private long performedReads;
    private boolean prepareSent = false;
    private GlobalTransaction gb;
+   private final boolean trace = getLog().isTraceEnabled();
 
    public TransactionStatistics(int size, Configuration configuration) {
       this.initTime = System.nanoTime();
@@ -67,7 +68,7 @@ public abstract class TransactionStatistics implements InfinispanStat {
       this.transactionalClass = TransactionsStatisticsRegistry.DEFAULT_ISPN_CLASS;
       this.statisticsContainer = new StatisticsContainerImpl(size);
       this.configuration = configuration;
-      if (getLog().isTraceEnabled()) {
+      if (trace) {
          getLog().tracef("Created transaction statistics. Class is %s. Start time is %s",
                  transactionalClass, initTime);
       }
@@ -180,8 +181,9 @@ public abstract class TransactionStatistics implements InfinispanStat {
     * running the remote transaction and then terminateTransaction is invoked to sample statistics.
     */
    public final void terminateTransaction() {
-      if (getLog().isTraceEnabled()) {
-         getLog().tracef("Terminating transaction. Is read only? %s. Is commit? %s", isReadOnly, isCommit);
+      Log log = getLog();
+      if (trace) {
+         log.tracef("Terminating transaction. Is read only? %s. Is commit? %s", isReadOnly, isCommit);
       }
 
        /*
@@ -196,12 +198,12 @@ public abstract class TransactionStatistics implements InfinispanStat {
       if (heldLocks > 0) {
          boolean remote = !(this instanceof LocalTransactionStatistics);
          if (!LockRelatedStatsHelper.shouldAppendLocks(configuration, isCommit, remote, id)) {
-            if (getLog().isTraceEnabled())
-               getLog().trace("DLOCKS : TID " + Thread.currentThread().getId() + " Sampling locks for " + (remote ? "remote " : "local ") + " transaction " + this.id + " commit? " + isCommit);
+            if (trace)
+               log.trace("DLOCKS : TID " + Thread.currentThread().getId() + " Sampling locks for " + (remote ? "remote " : "local ") + " transaction " + this.id + " commit? " + isCommit);
             immediateLockingTimeSampling(heldLocks, isCommit);
          } else {
-            if (getLog().isTraceEnabled())
-               getLog().trace("DLOCKS : NOT sampling locks for " + (remote ? "remote " : "local ") + " transaction " + this.id);
+            if (trace)
+               log.trace("DLOCKS : NOT sampling locks for " + (remote ? "remote " : "local ") + " transaction " + this.id);
          }
       }
 
@@ -237,7 +239,7 @@ public abstract class TransactionStatistics implements InfinispanStat {
    protected abstract void immediateLockingTimeSampling(int heldLocks, boolean isCommit);
 
    public final void flush(ConcurrentGlobalContainer globalStatistics) {
-      if (getLog().isTraceEnabled()) {
+      if (trace) {
          getLog().tracef("Flush this [%s] to %s", this, globalStatistics);
       }
       this.statisticsContainer.mergeTo(globalStatistics, isLocal());
@@ -315,19 +317,19 @@ public abstract class TransactionStatistics implements InfinispanStat {
 
    protected long computeCumulativeLockHoldTime(int numLocks, long currentTime) {
       Set<Map.Entry<Object, Long>> keySet = this.takenLocks.entrySet();
-      final boolean trace = (getLog().isTraceEnabled());
       long ret = numLocks * currentTime;
+      Log log = getLog();
       if (trace) {
-         getLog().trace("Held locks from param " + numLocks + "numLocks in entryset " + keySet.size());
-         getLog().trace("Now is " + currentTime + "total is " + ret);
+         log.trace("Held locks from param " + numLocks + "numLocks in entryset " + keySet.size());
+         log.trace("Now is " + currentTime + "total is " + ret);
       }
       for (Map.Entry<Object, Long> e : keySet) {
          ret -= e.getValue();
          if (trace)
-            getLog().trace("TID " + Thread.currentThread().getId() + " " + e.getKey() + " " + e.getValue());
+            log.trace("TID " + Thread.currentThread().getId() + " " + e.getKey() + " " + e.getValue());
       }
       if (trace)
-         getLog().trace("TID " + Thread.currentThread().getId() + " " + "Avg lock hold time is " + (ret / (long) numLocks) * 1e-3);
+         log.trace("TID " + Thread.currentThread().getId() + " " + "Avg lock hold time is " + (ret / (long) numLocks) * 1e-3);
       return ret;
    }
 }
