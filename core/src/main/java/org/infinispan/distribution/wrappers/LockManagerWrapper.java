@@ -50,11 +50,13 @@ public class LockManagerWrapper implements LockManager {
    private final LockManager actual;
    private final StreamLibContainer streamLibContainer;
    private boolean sampleHoldTimes = false;
+   private final boolean isGMU;
 
-   public LockManagerWrapper(LockManager actual, StreamLibContainer streamLibContainer, boolean sampleHoldTimes) {
+   public LockManagerWrapper(LockManager actual, StreamLibContainer streamLibContainer, boolean sampleHoldTimes, boolean isGMU) {
       this.actual = actual;
       this.streamLibContainer = streamLibContainer;
       this.sampleHoldTimes = sampleHoldTimes;
+      this.isGMU = isGMU;
    }
 
    @Override
@@ -88,7 +90,7 @@ public class LockManagerWrapper implements LockManager {
          if (trace) {
             log.tracef("LockManagerWrapper.unlockAll");
          }
-         flushPendingLocksIfNeeded(((TxInvocationContext) ctx).getGlobalTransaction());
+         flushLocksIfNeeded(((TxInvocationContext) ctx).getGlobalTransaction(), isGMU);
       }
       actual.unlockAll(ctx);
    }
@@ -218,27 +220,50 @@ public class LockManagerWrapper implements LockManager {
       return false;
    }
 
+   private void newFlushRRLocks(GlobalTransaction lockOwner) {
+      final boolean trace = log.isTraceEnabled();
+      TransactionStatistics txs = TransactionsStatisticsRegistry.getTransactionStatistics();
+      if (txs == null) {
+         log.fatal("Txs statistic is null upon flushing for " + lockOwner);
+         return;
+      }
+      if (trace)
+         log.trace("DLOCKS going to flush in RR mode for " + lockOwner);
+      txs.immediateLockFlushIfNeeded();
+
+   }
+
+
    private void flushPendingLocksIfNeeded(GlobalTransaction lockOwner) {
       final boolean trace = log.isTraceEnabled();
-
       if (trace) {
          if (!sampleHoldTimes) {
             log.trace("DLOCKS: not sampling for " + lockOwner.globalId() + " as sampleHT is not enabled");
-         }
-         if (!TransactionsStatisticsRegistry.isActive()) {
-            log.trace("DLOCKS: not sampling for " + lockOwner.globalId() + " as Stats are not enabled");
          }
          if (!LockRelatedStatsHelper.maybePendingLocks(lockOwner)) {
             log.trace("DLOCKS: not sampling for " + lockOwner.globalId() + " as no locks may be pending");
          }
       }
 
-      if (TransactionsStatisticsRegistry.isActive() && sampleHoldTimes &&
-              LockRelatedStatsHelper.maybePendingLocks(lockOwner)) {
+      if (LockRelatedStatsHelper.maybePendingLocks(lockOwner)) {
          if (trace) {
             log.trace("DLOCKS : Will I flush locks for " + lockOwner.globalId() + "?");
          }
          TransactionsStatisticsRegistry.flushPendingRemoteLocksIfNeeded(lockOwner);
       }
+
    }
+
+   private void flushLocksIfNeeded(GlobalTransaction lockOwner, final boolean isGMU) {
+      if (TransactionsStatisticsRegistry.isActive() && sampleHoldTimes) {
+         if (!isGMU) {
+            newFlushRRLocks(lockOwner);
+         } else {
+            flushPendingLocksIfNeeded(lockOwner);
+         }
+      } else {
+         log.trace("DLOCKS: not sampling for " + lockOwner.globalId() + " as Stats are not enabled");
+      }
+   }
+
 }

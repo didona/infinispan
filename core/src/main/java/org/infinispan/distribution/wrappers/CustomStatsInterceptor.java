@@ -2567,7 +2567,7 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
    private void replaceLockManager(ComponentRegistry componentRegistry) {
       LockManager lockManager = componentRegistry.getComponent(LockManager.class);
       // this.configuration.customStatsConfiguration().sampleServiceTimes());
-      LockManagerWrapper lockManagerWrapper = new LockManagerWrapper(lockManager, StreamLibContainer.getOrCreateStreamLibContainer(cache), true);
+      LockManagerWrapper lockManagerWrapper = new LockManagerWrapper(lockManager, StreamLibContainer.getOrCreateStreamLibContainer(cache), true,configuration.versioning().scheme().equals(VersioningScheme.GMU));
       componentRegistry.registerComponent(lockManagerWrapper, LockManager.class);
    }
 

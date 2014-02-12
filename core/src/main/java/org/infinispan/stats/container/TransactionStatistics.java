@@ -174,26 +174,9 @@ public abstract class TransactionStatistics implements InfinispanStat {
       this.addValue(param, 1);
    }
 
-   /**
-    * Finalizes statistics of the transaction. This is either called at prepare(1PC)/commit/rollbackCommand visit time
-    * for local transactions or upon invocation from InboundInvocationHandler for remote xact
-    * (commit/rollback/txCompletionNotification). The remote xact stats container is first "attached" to the thread
-    * running the remote transaction and then terminateTransaction is invoked to sample statistics.
-    */
-   public final void terminateTransaction() {
-      Log log = getLog();
-      if (trace) {
-         log.tracef("Terminating transaction. Is read only? %s. Is commit? %s", isReadOnly, isCommit);
-      }
 
-       /*
-         In case of aborts, locks are *always* released after receiving a RollbackCommand from the coordinator (even if the acquisition fails during the prepare phase)
-         This is good, since end of transaction and release of the locks coincide.
-         In case of commit we have two cases:
-            In some cases we have that the end of xact and release of the locks coincide
-            In another case we have that the end of the xact and the release of the locks don't coincide, and the lock holding time has to be "injected" upon release
-            this is the case of GMU with commit async, for example, or if locks are actually released upon receiving the TxCompletionNotificationCommand
-         */
+   public void immediateLockFlushIfNeeded() {
+      final Log log = getLog();
       int heldLocks = this.takenLocks.size();
       if (heldLocks > 0) {
          boolean remote = !(this instanceof LocalTransactionStatistics);
@@ -206,6 +189,43 @@ public abstract class TransactionStatistics implements InfinispanStat {
                log.trace("DLOCKS : NOT sampling locks for " + (remote ? "remote " : "local ") + " transaction " + this.id);
          }
       }
+   }
+
+   /**
+    * Finalizes statistics of the transaction. This is either called at prepare(1PC)/commit/rollbackCommand visit time
+    * for local transactions or upon invocation from InboundInvocationHandler for remote xact
+    * (commit/rollback/txCompletionNotification). The remote xact stats container is first "attached" to the thread
+    * running the remote transaction and then terminateTransaction is invoked to sample statistics.
+    */
+   public final void terminateTransaction() {
+      final Log log = getLog();
+      if (trace) {
+         log.tracef("Terminating transaction. Is read only? %s. Is commit? %s", isReadOnly, isCommit);
+      }
+
+       /*
+         In case of aborts, locks are *always* released after receiving a RollbackCommand from the coordinator (even if the acquisition fails during the prepare phase)
+         This is good, since end of transaction and release of the locks coincide.
+         In case of commit we have two cases:
+            In some cases we have that the end of xact and release of the locks coincide
+            In another case we have that the end of the xact and the release of the locks don't coincide, and the lock holding time has to be "injected" upon release
+            this is the case of GMU with commit async, for example, or if locks are actually released upon receiving the TxCompletionNotificationCommand
+         */
+      immediateLockFlushIfNeeded();
+      /*
+      int heldLocks = this.takenLocks.size();
+      if (heldLocks > 0) {
+         boolean remote = !(this instanceof LocalTransactionStatistics);
+         if (!LockRelatedStatsHelper.shouldAppendLocks(configuration, isCommit, remote, id)) {
+            if (trace)
+               log.trace("DLOCKS : TID " + Thread.currentThread().getId() + " Sampling locks for " + (remote ? "remote " : "local ") + " transaction " + this.id + " commit? " + isCommit);
+            immediateLockingTimeSampling(heldLocks, isCommit);
+         } else {
+            if (trace)
+               log.trace("DLOCKS : NOT sampling locks for " + (remote ? "remote " : "local ") + " transaction " + this.id);
+         }
+      }
+      */
 
       double execTime = System.nanoTime() - this.initTime;
       if (this.isReadOnly) {
