@@ -352,8 +352,8 @@ public abstract class TransactionStatistics implements InfinispanStat {
       long ret = numLocks * currentTime;
       Log log = getLog();
       if (trace) {
-         log.trace("Held locks from param " + numLocks + "numLocks in entryset " + keySet.size());
-         log.trace("Now is " + currentTime + "total is " + ret);
+         log.trace("Held locks " + numLocks + " numLocks in entryset " + keySet.size());
+         log.trace("Now is " + currentTime + " total is " + ret);
       }
       for (Map.Entry<Object, Long> e : keySet) {
          ret -= e.getValue();

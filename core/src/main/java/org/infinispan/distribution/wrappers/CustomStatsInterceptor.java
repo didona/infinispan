@@ -217,6 +217,7 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
       }
 
       TransactionStatistics transactionStatistics = initStatsIfNecessary(ctx);
+      transactionStatistics.setTransactionOutcome(true);
       long currCpuTime = TransactionsStatisticsRegistry.getThreadCPUTime();
       long currTime = System.nanoTime();
       transactionStatistics.addNTBCValue(currTime);
@@ -231,11 +232,12 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
             log.trace("DLOCKS : Not appending locks for " + ((!ctx.isOriginLocal()) ? "remote " : "local ") + "transaction " +
                     ctx.getGlobalTransaction().globalId());
       }
+
       Object ret = invokeNextInterceptor(ctx, command);
 
       handleCommitCommand(transactionStatistics, currTime, currCpuTime, ctx);
 
-      transactionStatistics.setTransactionOutcome(true);
+
       //We only terminate a local transaction, since RemoteTransactions are terminated from the InboundInvocationHandler
       if (ctx.isOriginLocal()) {
          TransactionsStatisticsRegistry.terminateTransaction(transactionStatistics);
@@ -354,10 +356,11 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
       }
 
       TransactionStatistics transactionStatistics = initStatsIfNecessary(ctx);
+      transactionStatistics.setTransactionOutcome(false);
       long currentCpuTime = TransactionsStatisticsRegistry.getThreadCPUTime();
       long initRollbackTime = System.nanoTime();
       Object ret = invokeNextInterceptor(ctx, command);
-      transactionStatistics.setTransactionOutcome(false);
+
 
       handleRollbackCommand(transactionStatistics, initRollbackTime, currentCpuTime, ctx);
       if (ctx.isOriginLocal()) {
@@ -2567,7 +2570,7 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
    private void replaceLockManager(ComponentRegistry componentRegistry) {
       LockManager lockManager = componentRegistry.getComponent(LockManager.class);
       // this.configuration.customStatsConfiguration().sampleServiceTimes());
-      LockManagerWrapper lockManagerWrapper = new LockManagerWrapper(lockManager, StreamLibContainer.getOrCreateStreamLibContainer(cache), true,configuration.versioning().scheme().equals(VersioningScheme.GMU));
+      LockManagerWrapper lockManagerWrapper = new LockManagerWrapper(lockManager, StreamLibContainer.getOrCreateStreamLibContainer(cache), true, configuration.versioning().scheme().equals(VersioningScheme.GMU));
       componentRegistry.registerComponent(lockManagerWrapper, LockManager.class);
    }
 
