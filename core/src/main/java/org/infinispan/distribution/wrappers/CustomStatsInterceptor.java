@@ -276,14 +276,15 @@ public final class CustomStatsInterceptor extends BaseCustomInterceptor {
          success = true;
          handlePrepareCommand(transactionStatistics, currTime, currCpuTime, ctx, command);
          return ret;
-         //This series of catches is to capture the exception thrown on the LOCAL node
+         //This series of catches is to capture the exception thrown on the node carrying out this prepare
+         //whether it is the remote node or local one wrt the xact
       } catch (TimeoutException e) {
          /*
           *  track ALL the timed out lock requests!  Consider that a remote transaction that fails
           *  on this node WILL NOT be considered for statistics!!
           */
 
-         //Trying to take them separately...
+         //Trying to take them separately...    * This is useless, I may get rid of this and use the _R just 4 query
          if (ctx.isOriginLocal())
             transactionStatistics.incrementValue(NUM_TIMED_OUT_LOCKS_L);
          else
